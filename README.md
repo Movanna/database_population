@@ -17,6 +17,9 @@ The starting point was a large Excel file containing info about documents, inclu
 ## 2. deal_with_persons.py
 This script populates table subject. The starting point was a csv with info about persons, originating from the list constructed by sort_persons.py. If a person has a different or differently spelled name in Finnish, connections are made to tables translation and translation_text. The output includes two dictionaries, needed later when populating table publication.
 
-## 3. find_facsimiles_old_signum.py
-The starting point is a csv file with info about documents that will be made into texts in our edition. An URL has been recorded for each document. The URL contains an archive signum and an image signum/number for the document's first image. We need to find out the (probable) last signum too, so that we can find all images belonging to a text, not just the first one. This script finds out which images belong to which document, and then stores file paths to those images.
+## 3. a) find_facsimiles_old_signum.py
+The starting point is a csv file with info about documents that will be made into texts (i.e. publications) in our edition. An URL has been recorded for each document. The URL contains an archive signum and an image signum/number for the document's first image. We need to find out the (probable) last signum too, so that we can find all images belonging to a text, not just the first one. This script finds out which images belong to which document, and then stores file paths to those images.
+
+## 3. b) find_facsimiles_new_signum.py
+This is a slightly different version of the script above. The starting point is a similar csv file with info about the publication and its images. This time both the first and last image signum of each publication's facsimile is in the file, but we need to modify the signums a bit. Now there may also be an alternative facsimile for some publications, which has to be recorded correctly.
 
