@@ -11,6 +11,8 @@ These scripts populate the different tables of the database and also create the 
 
 The main achievement of the scripts in this repo is that the db has been populated entirely by them. Some smaller corrections are naturally made continuously in the db, but otherwise everything is added by running the scipts and not by hand. Also, the spreadsheets that contain the original info about the documents were made by others before there was any notion of the db and its structure. Initially, only the file name of the first image for each document was recorded, and senders/receivers of letters were recorded in multiple ways. In short, there was a lot of unstructured data, and I had to find ways of sorting it and extracting the useful bits. I am pleased with how neatly persons, different language versions of a text, images and metadata are now all connected. This enables a great digital edition and a fully functioning workflow where no one has to do unnecessary work.
 
+All scripts written by me in 2021–2022, except for two functions in populate_facsimile_collection.py and the whole of fetch_facsimile_metadata.py (which I'm still the co-author of). I thus also planned the resulting workflow for the project.
+
 ## 1. Populate table subject
 Table subject holds information about persons.
 
