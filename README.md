@@ -53,12 +53,24 @@ This script adds hansards, i.e. protocols from the Diet (national council) or la
 This script adds lectures. It is similar to the others adding manuscripts, except that it also adds subtitles to the publications.
 
 ## 4. Populate table publication_facsimile_collection
-Table publication_facsimile_collection holds info about the facsimile units, i.e. all the images that together make up the facsimile for a publication.  It is connected to table publication through table publication_facsimile, which also determines the order in which the facsimiles will appear if there are two or more of them for a publication.
+Table publication_facsimile_collection holds info about the facsimile units, i.e. all the images that together make up the facsimile for a publication. It is connected to table publication through table publication_facsimile, which also determines the order in which the facsimiles will appear if there are two or more of them for a publication.
 
 ### 4. a) populate_facsimile_collection.py
 This script creates the facsimile folder for each facsimile and fills it with the right images, which are renamed, resized and put into subdirectories, and populates tables publication_facsimile_collection and publication_facsimile. The facsimile folder is named after the db id. The script needs the csv:s which were originally created by the find_facsimiles-scripts and later enriched by the populate_publication-scripts. The csv:s contain info about publications and their facsimiles.
 
-## 5. Fix facsimiles afterwards
+### 4. b) fetch_facsimile_metadata.py
+This script is needed if there are no images, just links to https://digi.kansalliskirjasto.fi, which already has digitized the images and put them online. The script fetches metadata based on URL using API and inserts it into table publication_facsimile_collection. The script also updates table publication_facsimile. This way the facsimile info comes straight from the source.
+
+## 5. Fix things afterwards
+
+### 5. a) create_facsimiles.py
 This script is used for fixing flawed facsimile units that have already been created and added to the database and the file storage. Sometimes you find out afterwards that there are images missing, or that the images are in the wrong order. This script needs the id of the facsimile and the file paths to the correct images, in the right order, and will then create a new facsimile folder and fill it with the new images, which are renamed, resized and put into subdirectories as required. Then the old folder can be replaced.
 
+### 5. b) update_archive_signum.py
+This script updates table publication with more extensive archive signums. Good I had all those csv:s saved! This value was in the csv:s but at the moment when I added the publications I just didn't know it was valuable.
 
+### 5. c) update_title_and_signum.py
+This script updates publication titles and archive signums in tables publication_manuscript and publication_facsimile_collection. Yes, the same data is in several places, but it makes the db more human friendly to scroll through when there's a title to the manuscript or facsimile, and just not an id. Besides, that wasn't even my idea. The true title is in translation_text though, and that's where I make manual corrections if it turns out to be wrong. But it's annoying to know that there are misleading titles in other tables, if you just fix them in one, so this script makes everything up-to-date in all tables.
+
+### 5. d) add_publication_group.py
+This script finds out the right publication_group for each publication according to its date and then updates table publication. Groups were not settled on when I first started adding publications, so this fixes lacking group id:s. Now it could be incorporated in the populate_publication-scripts.
