@@ -61,7 +61,7 @@ This script creates the facsimile folder for each facsimile and fills it with th
 ### 4. b) fetch_facsimile_metadata.py
 This script is needed if there are no images, just links to https://digi.kansalliskirjasto.fi, which already has digitized the images and put them online. The script fetches metadata based on URL using API and inserts it into table publication_facsimile_collection. The script also updates table publication_facsimile. This way the facsimile info comes straight from the source.
 
-## 5. Fix things afterwards
+## 5. Fix things afterwards and tidy up the db
 
 ### 5. a) create_facsimiles.py
 This script is used for fixing flawed facsimile units that have already been created and added to the database and the file storage. Sometimes you find out afterwards that there are images missing, or that the images are in the wrong order. This script needs the id of the facsimile and the file paths to the correct images, in the right order, and will then create a new facsimile folder and fill it with the new images, which are renamed, resized and put into subdirectories as required. Then the old folder can be replaced.
@@ -74,3 +74,9 @@ This script updates publication titles and archive signums in tables publication
 
 ### 5. d) add_publication_group.py
 This script finds out the right publication_group for each publication according to its date and then updates table publication. Groups were not settled on when I first started adding publications, so this fixes lacking group id:s. Now it could be incorporated in the populate_publication-scripts.
+
+## 6. Create a table of contents for each part of the edition
+After a toc has been added the digital edition is usable: it now has texts, manuscripts, facsimiles, metadata and a way of chosing which text to read.
+
+### 6. a) create_toc.py
+This script generates a table of contents JSON file containing all publications belonging to a collection, sorted according to group and then chronologically. It creates both a Swedish and a Finnish toc. The toc files are not edited by hand, just generated again if there has been changes to the db (such as publications added or deleted or changed titles, dates, groups).
