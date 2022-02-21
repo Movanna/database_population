@@ -1,7 +1,9 @@
 # database_population
 Python scripts for populating a database for a digital edition.
 
-The database belongs to an edition project which publishes the works of the Finnish author and politician Leo Mechelin (1839–1914). The edition contains thousands of texts, which will be published on a website and to some extent also as e-books and in print. The main purpose of the project is to make historical texts and archive material accessible online by digitizing, transcribing and translating documents and by presenting them in a meaningful context. The PostgreSQL database is part of a generic digital edition platform, managed by the Society of Swedish Literature in Finland (see https://github.com/slsfi/digital_edition_documentation/wiki).
+The database belongs to an edition project which publishes the works of the Finnish author and politician Leo Mechelin (1839–1914). The edition contains thousands of texts, which will be published on a website and to some extent also as e-books and in print. The main purpose of the project is to make historical texts and archive material accessible online by digitizing, transcribing and translating documents and by presenting them in a meaningful context.
+
+The PostgreSQL database is part of a generic digital edition platform, managed by the Society of Swedish Literature in Finland (see https://github.com/slsfi/digital_edition_documentation/wiki). If you're planning to publish an XML-based online edition, this is an open source project that might be of interest.
 
 The database contains information about editions (i.e. collections of texts), texts, manuscripts, facsimiles (i.e. images of the original documents), editorial texts and persons related to the texts. Contrary to the earlier projects using the same digital edition platform (and thus database), this project is bilingual (Swedish/Finnish), so some changes were made to the original database schema in order to accommodate translations.
 
@@ -13,4 +15,8 @@ The main achievement of the scripts in this repo is that the db has been populat
 The starting point was a large Excel file containing info about documents, including the name of the author of each document. I extracted the names and made them into a csv. The names had been recorded differently, sometimes as "Surname, Forename(s)", and sometimes as "Forename(s) Surname", all name parts in the same field. The same person could also have been recorded several times in different ways. This script gets the names correctly split and ordered so that duplicates and errors can be found. This is the first step towards populating table subject, which holds info about persons.
 
 ## 2. deal_with_persons.py
-This script populates table subject. The starting point is a csv with info about persons, originating from the list constructed by sort_persons.py. If a person has a different or diffrently spelled name in Finnish, connections are made to tables translation and translation_text. The output includes two dictionaries, needed later when populating table publication.
+This script populates table subject. The starting point was a csv with info about persons, originating from the list constructed by sort_persons.py. If a person has a different or differently spelled name in Finnish, connections are made to tables translation and translation_text. The output includes two dictionaries, needed later when populating table publication.
+
+## 3. find_facsimiles_old_signum.py
+The starting point is a csv file with info about documents that will be made into texts in our edition. An URL has been recorded for each document. The URL contains an archive signum and an image signum/number for the document's first image. We need to find out the (probable) last signum too, so that we can find all images belonging to a text, not just the first one. This script finds out which images belong to which document, and then stores file paths to those images.
+
