@@ -31,8 +31,23 @@ This is a slightly different version of the script above. The starting point is 
 The following scripts populate table publication, which holds the main info about each text. Each category of texts has its different needs and its own ways of constructing titles and making connections to persons, so there's a different script for each category. The starting point in every case is a csv file containing info about the texts, but these lists may differ quite a lot. The csv was in most cases updated earlier on in the process by one of the find_facsimiles-scripts, and the populate_publication-scripts add more info to the csv: the publication id and title. They will be needed later when populating table facsimile_collection. Each script creates all the needed XML files for the publication (and its manuscript, if needed) and updates the db with those file paths. The scripts also add a template to the XML files, so editors can concentrate on adding the document's text instead of its header stuff.
 
 ### 3. a) populate_publication_received_letter.py
-This script adds the received letters. It also populates publication_manuscript, translation, translation_text, event, event_connection and event_occurrence in order to make the necessary connections between texts, persons and translations. It makes the date format uniform and constructs the title of each letter according to date and sender, in Swedish and Finnish. It makes some changes to the title before using it as part of the file name, and creates a folder structure that makes it easy for editors to find the right files.
+This script adds received letters. It also populates publication_manuscript, translation, translation_text, event, event_connection and event_occurrence in order to make the necessary connections between texts, persons and translations. It makes the date format uniform and constructs the title of each letter according to date and sender, in Swedish and Finnish. It makes some changes to the title before using it as part of the file name, and creates a folder structure that makes it easy for editors to find the right files.
 
 ### 3. b) populate_publication_sent_letter.py
-This script adds the sent letters. It is very similar to the one above, it just makes the titles and the connections to persons the other way round (as a sent letter obviously is the exact opposite of a received one).
+This script adds sent letters. It is very similar to the one above, it just makes the titles and the connections to persons the other way round (as a sent letter obviously is the exact opposite of a received one).
+
+### 3. c) populate_publication_article.py
+This script adds newspaper articles. It's a lot less complex, since other persons than Mechelin himself are not involved and there are no manuscripts.
+
+### 3. d) populate_publication_poem.py
+This script adds poems. It makes connections similar to the letter-scripts and handles the fact that some poems are manuscripts and others are printed.
+
+### 3. e) populate_publication_misc.py
+This script adds miscellaneous texts, mainly manuscripts. It is very similar to the one above.
+
+### 3. f) populate_publication_hansard.py
+This script adds hansards, i.e. protocols from the Diet (national council) or lantdagen/valtiopäivät. It is very similar to the article-adding one.
+
+### 3. g) populate_publication_lecture.py
+This script adds lectures. It is similar to the others adding manuscripts, except that it also adds subtitles to the publications.
 
