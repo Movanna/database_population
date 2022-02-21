@@ -12,6 +12,7 @@ These scripts populate the different tables of the database and also create the 
 The main achievement of the scripts in this repo is that the db has been populated entirely by them. Some smaller corrections are naturally made continuously in the db, but otherwise everything is added by running the scipts and not by hand. Also, the spreadsheets that contain the original info about the documents were made by others before there was any notion of the db and its structure. Initially, only the file name of the first image for each document was recorded, and senders/receivers of letters were recorded in multiple ways. In short, there was a lot of unstructured data, and I had to find ways of sorting it and extracting the useful bits. I am pleased with how neatly persons, different language versions of a text, images and metadata are now all connected. This enables a great digital edition and a fully functioning workflow where no one has to do unnecessary work.
 
 ## 1. Populate table subject
+Table subject holds information about persons.
 
 ### 1. a) sort_persons.py
 The starting point was a large Excel file containing info about documents, including the name of the author of each document. I extracted the names and made them into a csv. The names had been recorded differently, sometimes as "Surname, Forename(s)", and sometimes as "Forename(s) Surname", all name parts in the same field. The same person could also have been recorded several times in different ways. This script gets the names correctly split and ordered so that duplicates and errors can be found. This is the first step towards populating table subject, which holds info about persons.
@@ -50,4 +51,14 @@ This script adds hansards, i.e. protocols from the Diet (national council) or la
 
 ### 3. g) populate_publication_lecture.py
 This script adds lectures. It is similar to the others adding manuscripts, except that it also adds subtitles to the publications.
+
+## 4. Populate table publication_facsimile_collection
+Table publication_facsimile_collection holds info about the facsimile units, i.e. all the images that together make up the facsimile for a publication.  It is connected to table publication through table publication_facsimile, which also determines the order in which the facsimiles will appear if there are two or more of them for a publication.
+
+### 4. a) populate_facsimile_collection.py
+This script creates the facsimile folder for each facsimile and fills it with the right images, which are renamed, resized and put into subdirectories, and populates tables publication_facsimile_collection and publication_facsimile. The facsimile folder is named after the db id. The script needs the csv:s which were originally created by the find_facsimiles-scripts and later enriched by the populate_publication-scripts. The csv:s contain info about publications and their facsimiles.
+
+## 5. Fix facsimiles afterwards
+This script is used for fixing flawed facsimile units that have already been created and added to the database and the file storage. Sometimes you find out afterwards that there are images missing, or that the images are in the wrong order. This script needs the id of the facsimile and the file paths to the correct images, in the right order, and will then create a new facsimile folder and fill it with the new images, which are renamed, resized and put into subdirectories as required. Then the old folder can be replaced.
+
 
