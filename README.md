@@ -56,7 +56,7 @@ This script adds hansards, i.e. protocols from the Diet (national council) or la
 This script adds lectures. It is similar to the others adding manuscripts, except that it also adds subtitles to the publications.
 
 ## 4. Populate table publication_facsimile_collection
-Table publication_facsimile_collection holds info about the facsimile units, i.e. all the images that together make up the facsimile for a publication. It is connected to table publication through table publication_facsimile, which also determines the order in which the facsimiles will appear if there are two or more of them for a publication.
+Table publication_facsimile_collection holds info about the facsimile units, i.e. all the images that together make up the facsimile for a publication. It is connected to table publication through table publication_facsimile, which also determines the order in which the facsimile units will appear if there are two or more of them for a publication.
 
 ### 4. a) populate_facsimile_collection.py
 This script creates the facsimile folder for each facsimile and fills it with the right images, which are renamed, resized and put into subdirectories, and populates tables publication_facsimile_collection and publication_facsimile. The facsimile folder is named after the db id. The script needs the csv:s which were originally created by the find_facsimiles-scripts and later enriched by the populate_publication-scripts. The csv:s contain info about publications and their facsimiles.
