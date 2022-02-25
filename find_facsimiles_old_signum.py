@@ -27,6 +27,8 @@
 # signum and the file paths to the images. This csv will be used for
 # populating table publication as well as for creating the facsimile
 # folder and its images and connecting the folder to the publication.
+#
+# Sample input and output CSV at end of file.
 
 import re
 import json
@@ -278,3 +280,10 @@ def main():
     write_list_to_csv(final_result_list, CSV_OUT)
 
 main()
+
+'''
+sample input:
+18.3.1866;Saapunut sähke;;m;Carl af Forselles;Forselles konkurs, Tammerfors Linne- och Jern-Manufaktur Aktie-Bolag;ranska;KA;1;;;;;https://astia.narc.fi/astiaUi/digiview.php?imageId=10316479&aytun=1341774.KA&j=1;;;
+sample output:
+18.3.1866;Saapunut sähke;;m;Forselles, Carl af;Forselles konkurs, Tammerfors Linne- och Jern-Manufaktur Aktie-Bolag;ranska;KA;1;1441958557;0001;0001;1341774.KA;https://astia.narc.fi/astiaUi/digiview.php?imageId=10316479&aytun=1341774.KA&j=1;;;;['M:/Faksimiili/Mechelin 1/1341774.KA/jpeg/0001.jpg'];
+'''
