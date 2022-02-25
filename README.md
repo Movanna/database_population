@@ -23,7 +23,7 @@ The starting point was a large Excel file containing info about documents, inclu
 This script populates table subject. The starting point was a CSV with info about persons, originating from the list constructed by sort_persons.py. If a person has a different or differently spelled name in Finnish, connections are made to tables translation and translation_text. The output includes two dictionaries, needed later when populating table publication.
 
 ## 2. Find the images for each document
-Either the first image of a document or the first and last images are recorded, but all images need to be found. Also, there are many hundreds of directories and they have even more subdirectories, and we don't know beforehand where the images are to be found, because the file path is not recorded, just a combination of the directory name and the file name.
+Either the first image of a document or the first and last images are recorded, but all images need to be found. Also, there are several hundreds of image directories and they have even more subdirectories, and we don't know beforehand where the images are to be found, because the file path is not recorded, just a combination of the directory name and the file name.
 
 ### 2. a) find_facsimiles_old_signum.py
 The starting point is a csv file with info about documents that will be made into texts (i.e. publications) in our edition. An URL has been recorded for each document. The URL contains an archive signum and an image signum/number for the document's first image. We need to find out the (probable) last signum too, so that we can find all images belonging to a text, not just the first one. This script finds out which images belong to which document, and then stores file paths to those images.
