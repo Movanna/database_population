@@ -20,6 +20,8 @@
 # used for populating table publication as well as for creating the
 # facsimile folder and its images and connecting the folder to the
 # publication.
+#
+# Sample input and output (CSV) at end of file.
 
 import re
 import json
@@ -206,3 +208,10 @@ def main():
     write_list_to_csv(result_list, CSV_OUT)
 
 main()
+
+'''
+sample input:
+1.10.1878;luento;x;;Finlands statsrätt;8 föreläsningen;;ruotsi;64 LM/KA;2;;1441481490_0147;1441481490_0148;;;;;
+sample output:
+1.10.1878;luento;x;;Finlands statsrätt;8 föreläsningen;;ruotsi;64 LM/KA;2;1441481490;0147;0148;1909976.KA;;;;;['M:/Faksimiili/Mechelin_11/1441481490/master/0147.jpg', 'M:/Faksimiili/Mechelin_11/1441481490/master/0148.jpg'];
+'''
