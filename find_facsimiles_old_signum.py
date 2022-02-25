@@ -28,7 +28,7 @@
 # populating table publication as well as for creating the facsimile
 # folder and its images and connecting the folder to the publication.
 #
-# Sample input and output CSV at end of file.
+# Sample input and output (CSV) at end of file.
 
 import re
 import json
