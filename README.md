@@ -13,6 +13,8 @@ The database contains information about editions (i.e. collections of texts), te
 
 **All scripts written by me**, Anna Movall, in 2021–2022, except for two functions in populate_facsimile_collection.py and the whole of fetch_facsimile_metadata.py (which I'm still the co-author of). I thus also **planned the resulting workflow for the project**, because the digital publishing platform holds no solution whatsoever for that, it just provides the general backend and frontend.
 
+For the next step in the process of publishing these texts using the digital edition platform, see my repo transform_texts.
+
 ## 1. Populate table subject
 Table subject holds information about persons.
 
