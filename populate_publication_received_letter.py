@@ -15,6 +15,8 @@
 # (in this case a letter and its writer). It also uses other dictionaries
 # in order to make genre and language values uniform, and a csv with
 # info about persons.
+#
+# Sample input and output (CSV) at end of file.
 
 import json
 import psycopg2
@@ -525,3 +527,10 @@ def main():
     cursor.close()
 
 main()
+
+'''
+sample input:
+18.3.1866;Saapunut sähke;;m;Forselles, Carl af;Forselles konkurs, Tammerfors Linne- och Jern-Manufaktur Aktie-Bolag;ranska;KA;1;1441958557;0001;0001;1341774.KA;https://astia.narc.fi/astiaUi/digiview.php?imageId=10316479&aytun=1341774.KA&j=1;;;;['M:/Faksimiili/Mechelin 1/1341774.KA/jpeg/0001.jpg'];
+sample output:
+18.3.1866;Saapunut sähke;;m;Forselles, Carl af;Forselles konkurs, Tammerfors Linne- och Jern-Manufaktur Aktie-Bolag;ranska;KA;1;1441958557;0001;0001;1341774.KA;https://astia.narc.fi/astiaUi/digiview.php?imageId=10316479&aytun=1341774.KA&j=1;;;;['M:/Faksimiili/Mechelin 1/1341774.KA/jpeg/0001.jpg'];1217;18.3.1866 Carl af Forselles–LM;
+'''
