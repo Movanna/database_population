@@ -31,7 +31,7 @@ The starting point is a CSV file with info about documents that will be made int
 ### 2. b) find_facsimiles_new_signum.py
 This is a slightly different version of the script above. The starting point is a similar CSV file with info about the publication and its images. This time both the first and last image signum of each publication's facsimile is in the file, but we need to modify the signums a bit. Now there may also be an alternative facsimile for some publications, which has to be found and recorded correctly.
 
-## 3. Populate table publication
+## 3. Populate table publication and create the XML files
 The following scripts populate table publication, which holds the main info about each text. Each category of texts has its different needs and its own ways of constructing titles/file paths and making connections to persons, so there's a different script for each category. The starting point in every case is a CSV file containing info about the texts, but these lists may differ quite a lot. The CSV was in most cases updated earlier on in the process by one of the find_facsimiles-scripts, and the populate_publication-scripts add more info to the CSV: the publication ID and title. They will be needed later when populating table facsimile_collection. Each script creates all the needed XML files for the publication (and its manuscript, if needed) and updates the db with those file paths. For some text categorys, such as letters, the scripts also construct the titles for the texts. The scripts also add a template to each XML files, so editors can concentrate on adding the document's text instead of its header stuff.
 
 ### 3. a) populate_publication_received_letter.py
@@ -55,7 +55,7 @@ This script adds hansards, i.e. protocols from the Diet (national council) or la
 ### 3. g) populate_publication_lecture.py
 This script adds lectures. It is similar to the others adding manuscripts, except that it also adds subtitles to the publications.
 
-## 4. Populate table publication_facsimile_collection
+## 4. Populate table publication_facsimile_collection and create the image files
 Table publication_facsimile_collection holds info about the facsimile units, i.e. all the images that together make up the facsimile for a publication. It is connected to table publication through table publication_facsimile, which also determines the order in which the facsimile units will appear if there are two or more of them for a publication. Script a also creates the needed images and folders, while script b fetches metadata from another source and connects the publication with a link to that site holding the images.
 
 ### 4. a) populate_facsimile_collection.py
