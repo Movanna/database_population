@@ -14,6 +14,9 @@
 
 # The script uses dictionaries in order to make genre
 # and language values uniform.
+#
+# Sample input and output (CSV) at end of file.
+
 
 import psycopg2
 import re
@@ -444,3 +447,10 @@ def main():
     cursor.close()
 
 main()
+
+'''
+sample input:
+1.10.1878;luento;x;;Finlands statsrätt;8 föreläsningen;;ruotsi;64 LM/KA;2;1441481490;0147;0148;1909976.KA;;;;;['M:/Faksimiili/Mechelin_11/1441481490/master/0147.jpg', 'M:/Faksimiili/Mechelin_11/1441481490/master/0148.jpg'];
+sample output:
+1.10.1878;luento;x;;Finlands statsrätt;8 föreläsningen;;ruotsi;64 LM/KA;2;1441481490;0147;0148;1909976.KA;;;;;['M:/Faksimiili/Mechelin_11/1441481490/master/0147.jpg', 'M:/Faksimiili/Mechelin_11/1441481490/master/0148.jpg'];1293;1.10.1878 Finlands statsrätt;
+'''
