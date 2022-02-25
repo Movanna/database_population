@@ -1,4 +1,4 @@
-# This script generates a table of contents file (toc)
+# This script generates a table of contents file (toc) as json
 # containing all publications belonging to a collection
 # and sorted as follows:
 # firstly according to the publications' group id
