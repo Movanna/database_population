@@ -77,10 +77,10 @@ This script updates table publication with more extensive archive signums. Good 
 This script updates publication titles and archive signums in tables publication_manuscript and publication_facsimile_collection. Yes, the same data is in several places, but it makes the db more human friendly to scroll through when there's a title to the manuscript or facsimile, and not just an ID. Besides, that wasn't even my idea, the db came like this. The ”true” title is in translation_text though, and that's where I make manual corrections to titles. But it's annoying to know that there are misleading titles in other tables, if you just fix them in one, so this script makes everything neat and up-to-date in all tables.
 
 ### 5. d) add_publication_group.py
-This script finds out the right publication_group for each publication according to its date and then updates table publication. Groups were not settled on when I first started adding publications, so this fixes lacking group ID:s. Now it could be incorporated in the populate_publication-scripts.
+This script finds out the right publication_group for each publication according to its date and then updates table publication. Groups were not settled on when I first started adding publications, so this fixes lacking group ID:s. This script could now be incorporated in the populate_publication-scripts.
 
 ## 6. Create a table of contents for each part of the edition
-After a toc has been added the digital edition is actually usable: it now has texts, manuscripts, facsimiles, metadata and a way of navigating between texts. Now editors can keep refining the content and translators can go to the site and find their source texts.
+After a table of contents has been added the digital edition is actually usable: it now has texts, manuscripts, facsimiles, metadata and a way of navigating between texts. Now editors can keep refining the content and translators can go to the site and find their source texts.
 
 ### 6. a) create_toc.py
 This script generates a table of contents JSON file containing all publications belonging to a collection, sorted according to group and then chronologically. It creates both a Swedish and a Finnish toc. The toc files are not edited by hand, just generated again if there has been changes to the db (such as publications added or deleted or changed titles, dates, groups).
