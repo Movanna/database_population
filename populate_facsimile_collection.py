@@ -13,6 +13,8 @@
 # Functions create_facsimile_folders and copy_images_to_facs_folders
 # borrowed from Niklas Liljestrand (niklil) (who created them for the
 # SLS digital publishing platform).
+#
+# Sample input (CSV) at end of file.
 
 import psycopg2
 import re
@@ -167,3 +169,8 @@ def main():
     cursor.close()
 
 main()
+
+'''
+sample input:
+18.3.1866;Saapunut sähke;;m;Forselles, Carl af;Forselles konkurs, Tammerfors Linne- och Jern-Manufaktur Aktie-Bolag;ranska;KA;1;1441958557;0001;0001;1341774.KA;https://astia.narc.fi/astiaUi/digiview.php?imageId=10316479&aytun=1341774.KA&j=1;;;;['M:/Faksimiili/Mechelin 1/1341774.KA/jpeg/0001.jpg'];1217;18.3.1866 Carl af Forselles–LM;
+'''
