@@ -8,6 +8,8 @@
 # which will be made into publications. This script adds more info
 # to the file: the publication id and title. They are needed later
 # when populating table facsimile_collection.
+#
+# Sample input and output (CSV) at end of file.
 
 import psycopg2
 import re
@@ -286,3 +288,10 @@ def main():
     cursor.close()
 
 main()
+
+'''
+sample input:
+Helsingfors Dagblad;10.11.1882;Robert Lagerborg död.;
+sample output:
+Helsingfors Dagblad;10.11.1882;Robert Lagerborg död.;;1713;10.11.1882 Robert Lagerborg död.;
+'''
