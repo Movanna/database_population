@@ -42,13 +42,14 @@ def update_publication_manuscript(publication_id, archive_signum, title):
 
 def update_publication_facsimile_collection(publication_facsimile_collection_id, archive_signum, title):
     facsimile_type = 0
-    fetch_query = """SELECT DISTINCT title, description, priority FROM publication_facsimile_collection, publication_facsimile WHERE publication_facsimile_collection.id = %s AND NOT type = %s"""
-    values_to_insert = (publication_facsimile_collection_id, facsimile_type)
+    priority = 1
+    fetch_query = """SELECT DISTINCT title, description FROM publication_facsimile_collection, publication_facsimile WHERE publication_facsimile_collection.id = %s AND NOT type = %s AND priority = %s"""
+    values_to_insert = (publication_facsimile_collection_id, facsimile_type, priority)
     cursor.execute(fetch_query, values_to_insert)
     facsimile_data = cursor.fetchone()
     if facsimile_data is not None:
-        (old_title, old_archive_signum, priority) = facsimile_data
-        if "Version /" not in old_title and "<cite>" not in old_title and priority == 1 and title != old_title:
+        (old_title, old_archive_signum) = facsimile_data
+        if "Version /" not in old_title and "<cite>" not in old_title and title != old_title:
             update_query = """UPDATE publication_facsimile_collection SET title = %s WHERE id = %s"""
             value_to_update = (title, publication_facsimile_collection_id)
             cursor.execute(update_query, value_to_update)
@@ -56,7 +57,7 @@ def update_publication_facsimile_collection(publication_facsimile_collection_id,
         if archive_signum is not None and len(old_archive_signum) > len(archive_signum):
             print("facs_coll_id: " + str(publication_facsimile_collection_id) + ", signum: " + old_archive_signum)
             archive_signum = old_archive_signum
-        if archive_signum is not None and archive_signum != old_archive_signum and priority == 1:
+        if archive_signum is not None and archive_signum != old_archive_signum:
             update_query = """UPDATE publication_facsimile_collection SET description = %s WHERE id = %s"""
             value_to_update = (archive_signum, publication_facsimile_collection_id)
             cursor.execute(update_query, value_to_update)
