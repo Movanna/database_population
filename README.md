@@ -82,7 +82,7 @@ This script updates publication titles and archive signums in tables publication
 This script finds out the right publication_group for each publication according to its date and then updates table publication. Groups were not settled on when I first started adding publications, so this fixes lacking group ID:s.
 
 ### 5. e) add_translation_for_groups.py
-As seen above, groups were a later addition, and translations didn't exist in the beginning. This script adds translations to the titles of collections and groups by updating tables translation, translation_text, publication_collection and publication_group. Not complicated as such, but I got to use the psycopg2.sql module in order to generate SQL dynamically, because I needed to merge table names to the query. I hadn't done that before, so that was useful!
+As seen above, groups were a later addition, and translations didn't exist in the beginning. This script adds translations to the titles of collections and groups by updating tables translation, translation_text, publication_collection and publication_group. Not complicated as such, but I got to use the psycopg2.sql module in order to generate SQL dynamically, because I needed to merge table names to the query. That can't be done by using %s placeholders, since Psycopg will then try quoting the table name as a string value, generating invalid SQL. I hadn't done that before, so that was useful!
 
 ## 6. Create a table of contents for each part of the edition
 After a table of contents has been added the digital edition is actually usable: it now has texts, manuscripts, facsimiles, metadata and a way of navigating between texts. Now editors can keep refining the content and translators can go to the site and find their source texts.
