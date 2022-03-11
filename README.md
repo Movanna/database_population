@@ -79,7 +79,10 @@ This script updates table publication with more extensive archive signums. Good 
 This script updates publication titles and archive signums in tables publication_manuscript and publication_facsimile_collection. Yes, the same data is in several places, but it makes the db more human friendly to scroll through when there's a title to the manuscript or facsimile, and not just an ID. Besides, that wasn't even my idea, the db came like this. The ”true” title is in translation_text though, and that's where I make manual corrections to titles. But it's annoying to know that there are misleading titles in other tables, if you just fix them in one, so this script makes everything neat and up-to-date in all tables.
 
 ### 5. d) add_publication_group.py
-This script finds out the right publication_group for each publication according to its date and then updates table publication. Groups were not settled on when I first started adding publications, so this fixes lacking group ID:s. This script could now be incorporated in the populate_publication-scripts.
+This script finds out the right publication_group for each publication according to its date and then updates table publication. Groups were not settled on when I first started adding publications, so this fixes lacking group ID:s.
+
+### 5. e) add_translation_for_groups.py
+As seen above, groups were a later addition, and translations didn't exist in the beginning. This script adds translations to the titles of collections and groups by updating tables translation, translation_text, publication_collection and publication_group. Not complicated as such, but I got to use the psycopg2.sql module in order to generate SQL dynamically, because I needed to merge table names to the query. I hadn't done that before, so that was useful!
 
 ## 6. Create a table of contents for each part of the edition
 After a table of contents has been added the digital edition is actually usable: it now has texts, manuscripts, facsimiles, metadata and a way of navigating between texts. Now editors can keep refining the content and translators can go to the site and find their source texts.
