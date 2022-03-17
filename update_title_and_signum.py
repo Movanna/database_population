@@ -79,7 +79,9 @@ def update_publication_facsimile_collection(publication_facsimile_collection_id,
         if archive_signum is not None and len(old_archive_signum) > len(archive_signum):
             print("facs_coll_id: " + str(publication_facsimile_collection_id) + ", signum: " + old_archive_signum)
             archive_signum = old_archive_signum
-        if archive_signum is not None and archive_signum != old_archive_signum:
+        # don't update the archive signums of versions, since they
+        # may be different from the original publication's signum
+        if "Version" not in old_title and archive_signum is not None and archive_signum != old_archive_signum:
             update_query = """UPDATE publication_facsimile_collection SET description = %s WHERE id = %s"""
             value_to_update = (archive_signum, publication_facsimile_collection_id)
             cursor.execute(update_query, value_to_update)
