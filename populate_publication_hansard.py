@@ -8,6 +8,8 @@
 # which will be made into publications. This script adds more info
 # to the file: the publication id and title. They are needed later
 # when populating table facsimile_collection.
+#
+# Sample input and output (CSV) at end of file.
 
 import psycopg2
 import re
@@ -276,3 +278,10 @@ def main():
     cursor.close()
 
 main()
+
+'''
+sample input:
+28.3.1877;Lantdagen. Allmän värnplikt
+sample output:
+28.3.1877;Lantdagen. Allmän värnplikt;1748;28.3.1877 Lantdagen. Allmän värnplikt;
+'''
