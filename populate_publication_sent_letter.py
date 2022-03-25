@@ -15,6 +15,8 @@
 # (in this case a letter and its recipient). It also uses other dictionaries
 # in order to make genre and language values uniform, and a csv with
 # info about persons.
+#
+# Sample input and output (CSV) at end of file.
 
 import psycopg2
 import re
@@ -48,9 +50,13 @@ def create_list_from_csv(filename):
                 if elements[i] == "":
                     elements[i] = None
             list.append(elements)
-            # get rid of empty value at the end of each list in this list
-            if len(elements) == 19:
-                elements.pop(18)
+            print("list length: " + str(len(elements)))
+            # get rid of empty value at the end of each list
+            if len(elements) == 20:
+                elements.pop(19)
+            # if this is the list's length, then there's an alternative facsimile
+            if len(elements) == 21:
+                elements.pop(20)
         return list
 
 # get dictionary content from file
@@ -88,7 +94,7 @@ def create_sent_publication(COLLECTION_ID, persons_list, sent_letters, name_dict
             genre = category
         original_date = letter[0]
         original_publication_date, no_date, date_uncertain = replace_date(original_date)
-        language = letter[6]
+        language = letter[7]
         # csv is in Finnish, but db has Swedish values for this
         if language in language_dictionary.keys():
             original_language = language_dictionary[language]
@@ -99,7 +105,8 @@ def create_sent_publication(COLLECTION_ID, persons_list, sent_letters, name_dict
         original_language = original_language.replace("?", "")
         unordered_name = letter[4]
         # register the archive signums, old and new
-        archive_signum = letter[12] + ", " + letter[9]
+        # and the folder signum
+        archive_signum = letter[13] + ", " + letter[10] + ", " + letter[8]
         values_to_insert = (COLLECTION_ID, published, genre, original_publication_date, original_language, archive_signum)
         cursor.execute(insert_query, values_to_insert)
         publication_id = cursor.fetchone()[0]
@@ -145,39 +152,43 @@ def create_sent_publication(COLLECTION_ID, persons_list, sent_letters, name_dict
 # or if there is no date, make date XXXX-XX-XX
 def replace_date(original_date):
     date = "XXXX-XX-XX"
-    original_date = original_date.replace("/", ".")
-    original_date = original_date.replace("[", "")
-    original_date = original_date.replace("]", "")
-    match_string = re.search("\?", original_date)
-    if match_string:
-        original_date = original_date.replace("?", "")
-        if original_date == "":
-            no_date = True
-            date_uncertain = False
-        else:
-            no_date = False
+    if original_date is not None:
+        original_date = original_date.replace("/", ".")
+        original_date = original_date.replace("[", "")
+        original_date = original_date.replace("]", "")
+        match_string = re.search("\?", original_date)
+        if match_string:
+            original_date = original_date.replace("?", "")
             date_uncertain = True
-    else:
-        date_uncertain = False
+        else:
+            date_uncertain = False
         no_date = False
-    search_string = re.compile(r"(\d{1,2})\.(\d{1,2})\.(\d{4})")
-    match_string = re.search(search_string, original_date)
-    if match_string:
-        year = match_string.group(3)
-        month = match_string.group(2).zfill(2)
-        day = match_string.group(1).zfill(2)
-        date = year + "-" + month + "-" + day
-    search_string = re.compile(r"^(\d{1,2})\.(\d{4})")
-    match_string = re.search(search_string, original_date)
-    if match_string:
-        year = match_string.group(2)
-        month = match_string.group(1).zfill(2)
-        date = year + "-" + month + "-XX"
-    search_string = re.compile(r"(^\d{4})")
-    match_string = re.search(search_string, original_date)
-    if match_string:
-        date = match_string.group(0)
-        date = date + "-XX-XX"
+        search_string = re.compile(r"(\d{1,2})\.(\d{1,2})\.(\d{4})")
+        match_string = re.search(search_string, original_date)
+        found = False
+        if match_string:
+            year = match_string.group(3)
+            month = match_string.group(2).zfill(2)
+            day = match_string.group(1).zfill(2)
+            date = year + "-" + month + "-" + day
+            found = True
+        if not found:
+            search_string = re.compile(r"^(\d{1,2})\.(\d{4})")
+            match_string = re.search(search_string, original_date)
+            if match_string:
+                year = match_string.group(2)
+                month = match_string.group(1).zfill(2)
+                date = year + "-" + month + "-XX"
+                found = True
+        if not found:
+            search_string = re.compile(r"(\d{4})$")
+            match_string = re.search(search_string, original_date)
+            if match_string:
+                date = match_string.group(0)
+                date = date + "-XX-XX"
+    if original_date == "" or original_date is None:
+        date_uncertain = False
+        no_date = True
     return date, no_date, date_uncertain
 
 # create the titles for the publication
@@ -323,7 +334,7 @@ def create_directory(directory):
         os.makedirs(directory)
     return directory
 
-# each publication has two XML-files, a Swedish and a Finnish one
+# each publication has two XML files, a Swedish and a Finnish one
 # if original_language is something else than sv or fi, then
 # there's a third file and a file path that goes into publication_manuscript
 # otherwise the sv file path goes there
@@ -473,3 +484,10 @@ def main():
     cursor.close()
 
 main()
+
+'''
+sample input:
+1873?;lähetetty kirje;x;;Mechelin, Alexandra;rim;;ruotsi;113 LM/KA;1;1493079741;0395;0395;1886828.KA;;;;;['M:/Faksimiili/Mechelin_4/1493079741/master/0395.jpg'];
+sample output:
+1873?;lähetetty kirje;x;;Mechelin, Alexandra;rim;;ruotsi;113 LM/KA;1;1493079741;0395;0395;1886828.KA;;;;;['M:/Faksimiili/Mechelin_4/1493079741/master/0395.jpg'];1749;ca 1873 LM–Alexandra Mechelin;
+'''
