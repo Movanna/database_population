@@ -71,6 +71,9 @@ def find_out_group(publications):
                         group_id = 3
                     elif date >= datetime.date(1867, 1, 1) and date < datetime.date(1873, 1, 1):
                         group_id = 4
+                    else:
+                        group_id = UNKNOWN_TIME_PERIOD_ID
+                        print("Publication " + str(id) + " doesn't match the groups in collection " + str(COLLECTION_ID))
                 elif COLLECTION_ID == 2:
                     if date >= datetime.date(1873, 1, 1) and date < datetime.date(1874, 1, 1):
                         group_id = 6
@@ -80,11 +83,12 @@ def find_out_group(publications):
                         group_id = 21
                     elif date >= datetime.date(1880, 1, 1) and date < datetime.date(1882, 1, 1):
                         group_id = 30
-                # if the publication's date doesn't match the time periods
-                # above, either date or collection_id is wrong
+                    else:
+                        group_id = UNKNOWN_TIME_PERIOD_ID
+                        print("Publication " + str(id) + " doesn't match the groups in collection " + str(COLLECTION_ID))
                 else:
                     group_id = UNKNOWN_TIME_PERIOD_ID
-                    print("Publication " + str(id) + " is in the wrong collection according to its date!")
+                    print("Publication " + str(id) + " has no collection_id!")
             # if no date in the right format was found:
             # this has to be fixed
             else:
