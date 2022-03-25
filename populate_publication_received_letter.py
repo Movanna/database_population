@@ -50,12 +50,13 @@ def create_list_from_csv(filename):
                 if elements[i] == "":
                     elements[i] = None
             list.append(elements)
-        # get rid of empty value at the end of each list
-        # the longer list has an alternative facsimile
-        if len(elements) == 20:
-            elements.pop(19)
-        if len(elements) == 21:
-            elements.pop(20)
+            print("list length: " + str(len(elements)))
+            # get rid of empty value at the end of each list
+            if len(elements) == 20:
+                elements.pop(19)
+            # if this is the list's length, then there's an alternative facsimile
+            if len(elements) == 21:
+                elements.pop(20)
         return list
 
 # get dictionary content from file
@@ -86,12 +87,12 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
     for letter in received_letters:
         published = 1
         category = letter[1]
+        person_id = letter[2]
         # csv is in Finnish, but db has Swedish values for this
         if category in genre_dictionary.keys():
             genre = genre_dictionary[category]
         else:
             genre = category
-        person_id = letter[2]
         original_date = letter[0]
         original_publication_date, no_date, date_uncertain = replace_date(original_date)
         language = letter[7]
@@ -134,7 +135,7 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
         # publication_manuscript
         manuscript_type = 1
         manuscript_id = create_publication_manuscript(publication_id, published, manuscript_type, archive_signum, original_language, title_swe)
-        # each publication has two XML-files, a Swedish and a Finnish one
+        # each publication has two XML files, a Swedish and a Finnish one
         # if original_language is something else, then a third file will be created
         # these files contain a template and the editors will fill them with content
         # just like the titles, file paths are not kept in table publication
@@ -375,7 +376,7 @@ def create_directory(directory):
         os.makedirs(directory)
     return directory
 
-# each publication has two XML-files, a Swedish and a Finnish one
+# each publication has two XML files, a Swedish and a Finnish one
 # if original_language is something else than sv or fi, then
 # there's a third file and a file path that goes into publication_manuscript
 # otherwise the sv file path goes there
