@@ -153,39 +153,43 @@ def create_poem_publication(COLLECTION_ID, poems, genre_dictionary, language_dic
 # or if there is no date, make date XXXX-XX-XX
 def replace_date(original_date):
     date = "XXXX-XX-XX"
-    original_date = original_date.replace("/", ".")
-    original_date = original_date.replace("[", "")
-    original_date = original_date.replace("]", "")
-    match_string = re.search("\?", original_date)
-    if match_string:
-        original_date = original_date.replace("?", "")
-        if original_date == "":
-            no_date = True
-            date_uncertain = False
-        else:
-            no_date = False
+    if original_date is not None:
+        original_date = original_date.replace("/", ".")
+        original_date = original_date.replace("[", "")
+        original_date = original_date.replace("]", "")
+        match_string = re.search("\?", original_date)
+        if match_string:
+            original_date = original_date.replace("?", "")
             date_uncertain = True
-    else:
-        date_uncertain = False
+        else:
+            date_uncertain = False
         no_date = False
-    search_string = re.compile(r"(\d{1,2})\.(\d{1,2})\.(\d{4})")
-    match_string = re.search(search_string, original_date)
-    if match_string:
-        year = match_string.group(3)
-        month = match_string.group(2).zfill(2)
-        day = match_string.group(1).zfill(2)
-        date = year + "-" + month + "-" + day
-    search_string = re.compile(r"^(\d{1,2})\.(\d{4})")
-    match_string = re.search(search_string, original_date)
-    if match_string:
-        year = match_string.group(2)
-        month = match_string.group(1).zfill(2)
-        date = year + "-" + month + "-XX"
-    search_string = re.compile(r"(^\d{4})")
-    match_string = re.search(search_string, original_date)
-    if match_string:
-        date = match_string.group(0)
-        date = date + "-XX-XX"
+        search_string = re.compile(r"(\d{1,2})\.(\d{1,2})\.(\d{4})")
+        match_string = re.search(search_string, original_date)
+        found = False
+        if match_string:
+            year = match_string.group(3)
+            month = match_string.group(2).zfill(2)
+            day = match_string.group(1).zfill(2)
+            date = year + "-" + month + "-" + day
+            found = True
+        if not found:
+            search_string = re.compile(r"^(\d{1,2})\.(\d{4})")
+            match_string = re.search(search_string, original_date)
+            if match_string:
+                year = match_string.group(2)
+                month = match_string.group(1).zfill(2)
+                date = year + "-" + month + "-XX"
+                found = True
+        if not found:
+            search_string = re.compile(r"(\d{4})$")
+            match_string = re.search(search_string, original_date)
+            if match_string:
+                date = match_string.group(0)
+                date = date + "-XX-XX"
+    if original_date == "" or original_date is None:
+        date_uncertain = False
+        no_date = True
     return date, no_date, date_uncertain
 
 # create the titles for the publication
