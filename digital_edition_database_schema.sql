@@ -61,9 +61,34 @@ END;
 DELIMITER ;
 
 -- Dumping structure for table public.contributor
+CREATE TABLE IF NOT EXISTS "contribution" (
+	"id" BIGINT NOT NULL DEFAULT 'nextval(''contribution_id_seq''::regclass)',
+	"date_created" TIMESTAMP NULL DEFAULT 'now()',
+	"date_modified" TIMESTAMP NULL DEFAULT NULL,
+	"publication_collection_id" BIGINT NULL DEFAULT NULL,
+	"publication_collection_introduction_id" BIGINT NULL DEFAULT NULL,
+	"publication_collection_title_id" BIGINT NULL DEFAULT NULL,
+	"publication_id" BIGINT NULL DEFAULT NULL,
+	"publication_manuscript_id" BIGINT NULL DEFAULT NULL,
+	"deleted" SMALLINT NULL DEFAULT '0',
+	"type" TEXT NULL DEFAULT NULL,
+	"text_language" TEXT NULL DEFAULT NULL,
+	"contributor_id" BIGINT NULL DEFAULT NULL,
+	PRIMARY KEY ("id"),
+	CONSTRAINT "FK_contribution_contributor" FOREIGN KEY ("contributor_id") REFERENCES "public"."contributor" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT "FK_contribution_publication" FOREIGN KEY ("publication_id") REFERENCES "public"."publication" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT "FK_contribution_publication_collection" FOREIGN KEY ("publication_collection_id") REFERENCES "public"."publication_collection" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT "FK_contribution_publication_collection_introduction" FOREIGN KEY ("publication_collection_introduction_id") REFERENCES "public"."publication_collection_introduction" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT "FK_contribution_publication_collection_title" FOREIGN KEY ("publication_collection_title_id") REFERENCES "public"."publication_collection_title" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT "FK_contribution_publication_manuscript" FOREIGN KEY ("publication_manuscript_id") REFERENCES "public"."publication_manuscript" ("id") ON UPDATE NO ACTION ON DELETE NO ACTION
+);
+
+
+
+-- Dumping structure for table public.contributor
 CREATE TABLE IF NOT EXISTS "contributor" (
 	"id" BIGINT NOT NULL DEFAULT 'nextval(''contributor_seq''::regclass)',
-	"date_created" TIMESTAMP NULL DEFAULT '2018-10-12 09:12:28.144759',
+	"date_created" TIMESTAMP NULL DEFAULT 'now()',
 	"date_modified" TIMESTAMP NULL DEFAULT NULL,
 	"publication_collection_id" BIGINT NULL DEFAULT NULL,
 	"publication_collection_introduction_id" BIGINT NULL DEFAULT NULL,
