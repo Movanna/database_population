@@ -61,7 +61,12 @@ def create_dictionary(publication_info_sorted):
         # should generate a group level
         # with publications of the same group as children
         if i == 0 or group != publication_info_sorted[i-1][1]:
-            fetch_query = """SELECT name FROM publication_group WHERE id = %s"""
+            # Finnish group titles are in translation_text
+            if TRANSLATION_TEXT_LANGUAGE == "fi":
+                fetch_query = """SELECT text FROM translation_text, publication_group WHERE publication_group.translation_id = translation_text.translation_id AND publication_group.id = %s"""
+            # Swedish group titles are directly in publication_group
+            else:
+                fetch_query = """SELECT name FROM publication_group WHERE id = %s"""
             value_to_insert = (group,)
             cursor.execute(fetch_query, value_to_insert)
             group_name = cursor.fetchone()[0]
