@@ -38,14 +38,18 @@ def create_list_from_csv(filename):
             list.append(elements)
         return list
 
-# sort info and populate table contribution,
-# if a translator has been registered for the text
+# sort info and populate table contribution
 def add_contribution(translation):
     collection_id = translation[0]
     publication_id = translation[1]
     text_language = translation[2]
+    original_language = translation[3]
     translator = translation[4]
-    if translator is not None:
+    # if no translator has been registered, there's nothing to add
+    # if this text's language is the same as the publication's
+    # original language, this isn't a translation and someone
+    # has made a mistake by registering a translator for it
+    if translator is not None and text_language != original_language:
         # there might be several translators to a single text
         # registered as Surname_a, Forename_a + Surname_b, Forename_b
         # split the translators and their names and insert
