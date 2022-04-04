@@ -72,7 +72,7 @@ def find_out_group(publications):
                     elif date >= datetime.date(1867, 1, 1) and date < datetime.date(1873, 1, 1):
                         group_id = 4
                     else:
-                        group_id = UNKNOWN_TIME_PERIOD_ID
+                        group_id = 5
                         print("Publication " + str(id) + " doesn't match the groups in collection " + str(COLLECTION_ID))
                 elif COLLECTION_ID == 2:
                     if date >= datetime.date(1873, 1, 1) and date < datetime.date(1874, 1, 1):
@@ -84,7 +84,83 @@ def find_out_group(publications):
                     elif date >= datetime.date(1880, 1, 1) and date < datetime.date(1882, 1, 1):
                         group_id = 30
                     else:
-                        group_id = UNKNOWN_TIME_PERIOD_ID
+                        group_id = 40
+                        print("Publication " + str(id) + " doesn't match the groups in collection " + str(COLLECTION_ID))
+                elif COLLECTION_ID == 3:
+                    if date >= datetime.date(1882, 1, 1) and date < datetime.date(1885, 1, 1):
+                        group_id = 51
+                    elif date >= datetime.date(1885, 1, 1) and date < datetime.date(1887, 1, 1):
+                        group_id = 63
+                    elif date >= datetime.date(1887, 1, 1) and date < datetime.date(1889, 1, 1):
+                        group_id = 76
+                    elif date >= datetime.date(1889, 1, 1) and date < datetime.date(1890, 7, 1):
+                        group_id = 90
+                    else:
+                        group_id = 105
+                        print("Publication " + str(id) + " doesn't match the groups in collection " + str(COLLECTION_ID))
+                elif COLLECTION_ID == 4:
+                    if date >= datetime.date(1890, 7, 1) and date < datetime.date(1893, 1, 1):
+                        group_id = 121
+                    elif date >= datetime.date(1893, 1, 1) and date < datetime.date(1896, 1, 1):
+                        group_id = 122
+                    elif date >= datetime.date(1896, 1, 1) and date < datetime.date(1898, 8, 1):
+                        group_id = 123
+                    else:
+                        group_id = 124
+                        print("Publication " + str(id) + " doesn't match the groups in collection " + str(COLLECTION_ID))
+                elif COLLECTION_ID == 5:
+                    if date >= datetime.date(1898, 8, 1) and date < datetime.date(1899, 9, 1):
+                        group_id = 125
+                    elif date >= datetime.date(1899, 9, 1) and date < datetime.date(1900, 11, 1):
+                        group_id = 126
+                    elif date >= datetime.date(1900, 11, 1) and date < datetime.date(1902, 4, 1):
+                        group_id = 127
+                    elif date >= datetime.date(1902, 4, 1) and date < datetime.date(1903, 4, 1):
+                        group_id = 128
+                    else:
+                        group_id = 129
+                        print("Publication " + str(id) + " doesn't match the groups in collection " + str(COLLECTION_ID))
+                elif COLLECTION_ID == 6:
+                    if date >= datetime.date(1903, 4, 1) and date < datetime.date(1904, 2, 1):
+                        group_id = 130
+                    elif date >= datetime.date(1904, 2, 1) and date < datetime.date(1904, 11, 1):
+                        group_id = 131
+                    elif date >= datetime.date(1904, 11, 1) and date < datetime.date(1905, 8, 1):
+                        group_id = 132
+                    elif date >= datetime.date(1905, 8, 1) and date < datetime.date(1905, 12, 1):
+                        group_id = 133
+                    else:
+                        group_id = 134
+                        print("Publication " + str(id) + " doesn't match the groups in collection " + str(COLLECTION_ID))
+                elif COLLECTION_ID == 7:
+                    if date >= datetime.date(1905, 12, 1) and date < datetime.date(1906, 8, 1):
+                        group_id = 135
+                    elif date >= datetime.date(1906, 8, 1) and date < datetime.date(1907, 9, 1):
+                        group_id = 136
+                    elif date >= datetime.date(1907, 9, 1) and date < datetime.date(1908, 7, 1):
+                        group_id = 137
+                    else:
+                        group_id = 138
+                        print("Publication " + str(id) + " doesn't match the groups in collection " + str(COLLECTION_ID))
+                elif COLLECTION_ID == 8:
+                    if date >= datetime.date(1908, 7, 1) and date < datetime.date(1909, 6, 1):
+                        group_id = 139
+                    elif date >= datetime.date(1909, 6, 1) and date < datetime.date(1910, 3, 1):
+                        group_id = 140
+                    elif date >= datetime.date(1910, 3, 1) and date < datetime.date(1910, 7, 1):
+                        group_id = 141
+                    else:
+                        group_id = 142
+                        print("Publication " + str(id) + " doesn't match the groups in collection " + str(COLLECTION_ID))
+                elif COLLECTION_ID == 9:
+                    if date >= datetime.date(1910, 7, 1) and date < datetime.date(1912, 1, 1):
+                        group_id = 143
+                    elif date >= datetime.date(1912, 1, 1) and date < datetime.date(1913, 1, 1):
+                        group_id = 144
+                    elif date >= datetime.date(1913, 1, 1) and date < datetime.date(1914, 2, 1):
+                        group_id = 145
+                    else:
+                        group_id = 146
                         print("Publication " + str(id) + " doesn't match the groups in collection " + str(COLLECTION_ID))
                 else:
                     group_id = UNKNOWN_TIME_PERIOD_ID
