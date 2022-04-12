@@ -27,11 +27,13 @@ TRANSLATION_TEXT_LANGUAGE = "sv"
 
 # get the relevant info for all publications in a collection
 def get_publication_info():
-    fetch_query = """SELECT publication.id, publication_group_id, published_by, genre, original_publication_date, text, publication.translation_id FROM publication, translation_text WHERE publication.translation_id = translation_text.translation_id AND field_name = %s AND table_name = %s AND publication_collection_id = %s AND publication.published = %s AND publication.deleted = %s AND language = %s"""
-    values_to_insert = ("name", "publication", COLLECTION_ID, PUBLISHED, DELETED, TRANSLATION_TEXT_LANGUAGE)
+    fetch_query = """SELECT publication.id, publication_group_id, published_by, genre, original_publication_date, text, publication.translation_id, field_name FROM publication, translation_text WHERE publication.translation_id = translation_text.translation_id AND (field_name = %s OR field_name = %s) AND table_name = %s AND publication_collection_id = %s AND publication.published = %s AND publication.deleted = %s AND language = %s"""
+    values_to_insert = ("name", "subtitle", "publication", COLLECTION_ID, PUBLISHED, DELETED, TRANSLATION_TEXT_LANGUAGE)
     cursor.execute(fetch_query, values_to_insert)
     publication_info = cursor.fetchall()
-    publication_info_sorted = sorted(publication_info, key = operator.itemgetter(1, 4))
+    # sort the list of tuples according to group, date, id
+    # and field_name (the latter two needed for separating subtitles)
+    publication_info_sorted = sorted(publication_info, key = operator.itemgetter(1, 4, 0, 7))
     print(len(publication_info_sorted))
     return publication_info_sorted
 
@@ -40,27 +42,32 @@ def create_dictionary(publication_info_sorted):
     # create top level of dictionary
     toc_dict = {"text": COLLECTION_NAME, "collectionId": str(COLLECTION_ID), "type": "title", "children": []}
     for i in range(len(publication_info_sorted)):
-        row = publication_info_sorted[i]
-        publication_id = row[0]
-        group = row[1]
-        published_by = row[2]
-        genre = row[3]
-        date = row[4]
-        publication_title = row[5]
-        translation_id = row[6]
+        tuple = publication_info_sorted[i]
+        try:
+            next_tuple = publication_info_sorted[i + 1]
+        except:
+            next_tuple = None
+        publication_id = tuple[0]
+        group = tuple[1]
+        published_by = tuple[2]
+        genre = tuple[3]
+        date = tuple[4]
+        publication_title = tuple[5]
+        field_name = tuple[7]
+        # tuples containing subtitles should not be added
+        # as separate toc items, their info belongs to
+        # a publication which has already been added
+        if field_name == "subtitle":
+            continue
         item_id = str(COLLECTION_ID) + "_" + str(publication_id)
-        # fetch subtitle if the publication is a lecture
-        if genre == "föreläsning":
-            field_name = "subtitle"
-            fetch_query = """SELECT text FROM translation_text WHERE translation_id = %s AND field_name = %s AND language = %s"""
-            values_to_insert = (translation_id, field_name, TRANSLATION_TEXT_LANGUAGE)
-            cursor.execute(fetch_query, values_to_insert)
-            subtitle = cursor.fetchone()[0]
+        if next_tuple is not None:
+            next_field_name = next_tuple[7]
+            next_tuple_id = next_tuple[0]
         # first publication or publication whose group_id
         # is different from previous publication's group_id
         # should generate a group level
         # with publications of the same group as children
-        if i == 0 or group != publication_info_sorted[i-1][1]:
+        if i == 0 or group != publication_info_sorted[i - 1][1]:
             # Finnish group titles are in translation_text
             if TRANSLATION_TEXT_LANGUAGE == "fi":
                 fetch_query = """SELECT text FROM translation_text, publication_group WHERE publication_group.translation_id = translation_text.translation_id AND publication_group.id = %s"""
@@ -75,8 +82,12 @@ def create_dictionary(publication_info_sorted):
         # add a description if there is one
         if published_by is not None:
             toc_item_dict = {"url": "", "type": "est", "text": publication_title, "description": published_by, "itemId": item_id, "date": date, "genre": genre}
-        # add the subtitle as description if the publication is a lecture
-        elif genre == "föreläsning":
+        # add the subtitle as description if there is one
+        # the list has been ordered in such a way that if there's
+        # a subtitle to a publication, it should be in the next tuple
+        # but we'll check the id to make sure
+        elif next_tuple is not None and next_field_name == "subtitle" and publication_id == next_tuple_id:
+            subtitle = next_tuple[5]
             toc_item_dict = {"url": "", "type": "est", "text": publication_title, "description": subtitle, "itemId": item_id, "date": date, "genre": genre}
         # these texts should have a differently styled title in toc
         elif publication_title.find("Lantdagen. ") != -1:
