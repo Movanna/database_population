@@ -64,7 +64,7 @@ Table publication_facsimile_collection holds info about the facsimile units, i.e
 This script creates the facsimile folder for each facsimile and fills it with the right images, which are renamed, resized and put into subdirectories, and populates tables publication_facsimile_collection and publication_facsimile. The facsimile folder is named after the db ID. The script needs the CSV:s which were originally created by the find_facsimiles-scripts and later enriched by the populate_publication-scripts. The CSV:s contain info about publications and their facsimiles.
 
 ### 4. b) fetch_facsimile_metadata.py
-This script is needed if there are no images, just links to https://digi.kansalliskirjasto.fi, which already has digitized the images and put them online. The script fetches metadata based on URL using API and inserts it into table publication_facsimile_collection. The script also updates table publication_facsimile. This way the facsimile info comes straight from the source.
+This script is needed if there are no images, just links to https://digi.kansalliskirjasto.fi, which already has digitized the images (mainly newspapers) and published them online. The script fetches metadata based on URL using API and inserts it into table publication_facsimile_collection. The script also updates table publication_facsimile. This way the facsimile info comes straight from the source and the editor only needs to record the URL for the image, not the title, number and date of the newspaper, since this data is fetched by the script.
 
 ## 5. Fix things afterwards and tidy up the db
 As it happens, things change as you go along, and you realise that you have to add more data or come up with a way of fixing certain issues ...
