@@ -90,7 +90,7 @@ def create_dictionary(publication_info_sorted):
             subtitle = next_tuple[5]
             toc_item_dict = {"url": "", "type": "est", "text": publication_title, "description": subtitle, "itemId": item_id, "date": date, "genre": genre}
         # these texts should have a differently styled title in toc
-        elif publication_title.find("Lantdagen. ") != -1:
+        elif publication_title.find("Lantdagen. ") != -1 or publication_title.find("Valtiopäivät. ") != -1:
             publication_title_content = publication_title.split(". ")
             title_one = publication_title_content[0] + "."
             title_two = publication_title_content[1]
