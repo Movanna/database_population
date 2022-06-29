@@ -71,14 +71,14 @@ def find_first_signum(info_list):
     # construct the image signum by padding the image number with zeros
     # add the found signums to each list in the info_list
     for row in info_list:
-        url = row[13]
-        number_of_pages = row.pop(8)
+        url = row[14]
+        number_of_pages = row.pop(9)
         match_string = re.match(r"\d+", number_of_pages)
         if match_string is None or number_of_pages == "":
-            row.insert(8, "")
+            row.insert(9, "")
         else:
             number_of_pages = int(match_string.group())
-            row.insert(8, number_of_pages)
+            row.insert(9, number_of_pages)
         # look for signums in the url
         search_string = re.compile(r"aytun=(\d{7}\.KA)&j=(\d+)")
         match_string = re.search(search_string, url)
@@ -94,19 +94,19 @@ def find_first_signum(info_list):
             first_image_signum = first_image.zfill(4)
             # remove this empty slot in the list, placeholder for
             # (old) folder signum
-            row.pop(12)
-            row.insert(12, folder_signum)
+            row.pop(13)
+            row.insert(13, folder_signum)
             # placeholder for first image signum
-            row.pop(10)
-            row.insert(10, first_image_signum)
-            row.extend(first_image)
+            row.pop(11)
+            row.insert(11, first_image_signum)
+            row.append(first_image)
     # get rid of empty lists
     info_list = [row for row in info_list if row != []]
-    # sort the info_list by two criteria: first by row[12], i.e. folder_signum
-    # then by row[10], i.e. first_image_signum
+    # sort the info_list by two criteria: first by row[13], i.e. folder_signum
+    # then by row[11], i.e. first_image_signum
     # the list needs to be sorted like this in order for us to easily
     # find out the number of the last image
-    info_list.sort(key = lambda row: (row[12], row[10]))
+    info_list.sort(key = lambda row: (row[13], row[11]))
     return info_list
 
 # create path object for folder from given filepath string,
@@ -132,14 +132,14 @@ def find_last_signum(extended_info_list, file_list):
     i = 0
     while i < (len(extended_info_list) - 1):
         row = extended_info_list[i]
-        folder_signum = row[12]
-        first_image = int(row[17])
-        first_image_signum = row[10]
+        folder_signum = row[13]
+        first_image = int(row[18])
+        first_image_signum = row[11]
         # get the folder_signum of the following row in the list
-        next_folder = extended_info_list[i + 1][12]
+        next_folder = extended_info_list[i + 1][13]
         # if this folder_signum is the same as on our row: store its first_image value
         if next_folder == folder_signum:
-            next_publication_starts = int(extended_info_list[i + 1][17])
+            next_publication_starts = int(extended_info_list[i + 1][18])
             # now we can find out the probable signum of the last image of
             # our publication
             # two different publications are sometimes in the same image,
@@ -167,10 +167,10 @@ def find_last_signum(extended_info_list, file_list):
         # current list
         last_image_signum, match_list = find_image_paths(folder_signum, first_image, first_image_signum, last_image, last_image_signum, file_list)
         # first_image value is no longer needed
-        row.pop(17)
+        row.pop(18)
         # placeholder for last image signum
-        row.pop(11)
-        row.insert(11, last_image_signum)
+        row.pop(12)
+        row.insert(12, last_image_signum)
         row.extend([match_list])
         result_list.append(row)
         i += 1
@@ -178,18 +178,18 @@ def find_last_signum(extended_info_list, file_list):
     # we can't look for next folder
     if i == (len(extended_info_list) - 1):
         row = extended_info_list[i]
-        folder_signum = row[12]
-        first_image = int(row[17])
-        first_image_signum = row[10]
+        folder_signum = row[13]
+        first_image = int(row[18])
+        first_image_signum = row[11]
         last_image = None
         last_image_signum = ""
         # find file paths for all images, save file paths as list, append to current list
         last_image_signum, match_list = find_image_paths(folder_signum, first_image, first_image_signum, last_image, last_image_signum, file_list)
         # first_image value is no longer needed
-        row.pop(17)
+        row.pop(18)
         # placeholder for last image signum
-        row.pop(11)
-        row.insert(11, last_image_signum)
+        row.pop(12)
+        row.insert(12, last_image_signum)
         row.extend([match_list])
         result_list.append(row)
     return result_list
@@ -254,14 +254,14 @@ def find_image_paths(folder_signum, first_image, first_image_signum, last_image,
 # add new signum to list
 def find_new_folder_signum(result_list, signum_dictionary):
     for row in result_list:
-        old_folder_signum = row[12]
+        old_folder_signum = row[13]
         if old_folder_signum in signum_dictionary.keys():
             new_signum = signum_dictionary[old_folder_signum]
         else:
             new_signum = ""
         # placeholder for new folder signum
-        row.pop(9)
-        row.insert(9, new_signum)
+        row.pop(10)
+        row.insert(10, new_signum)
     return result_list
 
 def main():
@@ -283,7 +283,7 @@ main()
 
 '''
 sample input:
-18.3.1866;Saapunut sähke;;m;Carl af Forselles;Forselles konkurs, Tammerfors Linne- och Jern-Manufaktur Aktie-Bolag;ranska;KA;1;;;;;https://astia.narc.fi/astiaUi/digiview.php?imageId=10316479&aytun=1341774.KA&j=1;;;
+18.2.1873;saapunut kirje;;;Rönnbäck, S.;stockaffärer;;ruotsi;KA;1;;;;;https://astia.narc.fi/astiaUi/digiview.php?imageId=10317703&aytun=1392436.KA&j=3;;;
 sample output:
-18.3.1866;Saapunut sähke;;m;Forselles, Carl af;Forselles konkurs, Tammerfors Linne- och Jern-Manufaktur Aktie-Bolag;ranska;KA;1;1441958557;0001;0001;1341774.KA;https://astia.narc.fi/astiaUi/digiview.php?imageId=10316479&aytun=1341774.KA&j=1;;;;['M:/Faksimiili/Mechelin 1/1341774.KA/jpeg/0001.jpg'];
+18.2.1873;saapunut kirje;;;Rönnbäck, S.;stockaffärer;;ruotsi;KA;1;1443045825;0003;0003;1392436.KA;https://astia.narc.fi/astiaUi/digiview.php?imageId=10317703&aytun=1392436.KA&j=3;;;;['M:/Faksimiili/Mechelin 3/1392436.KA/jpeg/0003.jpg'];
 '''

@@ -445,6 +445,7 @@ def create_name_part_for_file(person, person_id):
     name_part = name_part.replace(".", "")
     name_part = name_part.replace(" ", "_")
     name_part = name_part.replace("–", "_")
+    name_part = name_part.replace("-", "_")
     name_part = name_part.replace("é", "e")
     name_part = name_part.replace("è", "e")
     name_part = name_part.replace("É", "E")
@@ -459,6 +460,10 @@ def create_name_part_for_file(person, person_id):
     name_part = name_part.replace("å", "a")
     name_part = name_part.replace("Ä", "A")
     name_part = name_part.replace("ä", "a")
+    # shorten long names of files and directories
+    # otherwise the file path will become too long
+    if len(name_part) >= 45:
+        name_part = name_part[0:44]
     return name_part
 
 # the XML files contain a template with the publication's title
