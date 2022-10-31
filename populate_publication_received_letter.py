@@ -106,7 +106,12 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
             original_language = original_language.replace("?", "")
         unordered_name = letter[4]
         # register the archive signums, old and new
-        archive_signum = letter[13] + ", " + letter[10]
+        # and the archive folder, if present
+        archive_folder = letter[8]
+        if archive_folder is None:
+            archive_signum = letter[13] + ", " + letter[10]
+        else:
+            archive_signum = letter[13] + ", " + letter[10] + ", " + letter[8]
         values_to_insert = (COLLECTION_ID, published, genre, original_publication_date, original_language, archive_signum)
         cursor.execute(insert_query, values_to_insert)
         publication_id = cursor.fetchone()[0]
