@@ -103,7 +103,18 @@ def create_misc_publication(COLLECTION_ID, misc_publications, genre_dictionary, 
             original_language = language
         original_language = original_language.replace("?", "")
         # register the archive signums, old and new
-        archive_signum = publication[13] + ", " + publication[10]
+        # and, if present, the folder signum
+        # if the document isn't from the National Archive it only has
+        # what compares to a folder signum
+        old_archive_signum = publication[13]
+        new_archive_signum = publication[10]
+        archive_folder = publication[8]
+        if old_archive_signum is not None and new_archive_signum is not None and archive_folder is not None:
+            archive_signum = old_archive_signum + ", " + new_archive_signum + ", " + archive_folder
+        elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
+            archive_signum = old_archive_signum + ", " + new_archive_signum
+        else:
+            archive_signum = archive_folder
         values_to_insert = (COLLECTION_ID, published, genre, original_publication_date, original_language, archive_signum)
         cursor.execute(insert_query, values_to_insert)
         publication_id = cursor.fetchone()[0]
