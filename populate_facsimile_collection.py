@@ -32,7 +32,8 @@ conn_db = psycopg2.connect(
 cursor = conn_db.cursor()
 
 CSV_IN = "csv/Forelasningar_faksimil_id.csv"
-# linked printed texts = 0, letters = 1, poems = 2, misc texts = 3, lectures = 4
+# linked printed texts = 0, letters = 1, poems = 2, misc texts = 3,
+# lectures = 4, printed texts = 5
 FACSIMILE_TYPE = "4"
 WEB_FACSIMILE_FOLDER = "M:/webbfaksimil/facsimile_collections/"
 
@@ -69,7 +70,15 @@ def create_publication_facsimile_collection(facsimiles):
         # this is a publication with 1 facsimile
         if len(facsimile) == 21:
             title = facsimile[20]
-            description = facsimile[13] + ", " + facsimile[10] + ", " + facsimile[8]
+            old_archive_signum = facsimile[13]
+            new_archive_signum = facsimile[10]
+            archive_folder = facsimile[8]
+            if old_archive_signum is not None and new_archive_signum is not None and archive_folder is not None:
+                description = old_archive_signum + ", " + new_archive_signum + ", " + archive_folder
+            elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
+                description = old_archive_signum + ", " + new_archive_signum
+            else:
+                description = archive_folder
             external_url = facsimile[14]
             publication_id = facsimile[19]
             first_image = facsimile[11]
@@ -79,7 +88,15 @@ def create_publication_facsimile_collection(facsimiles):
         # this is a publication with 2 separate facsimiles
         if len(facsimile) == 22:
             title = facsimile[21]
-            description = facsimile[13] + ", " + facsimile[10] + ", " + facsimile[8]
+            old_archive_signum = facsimile[13]
+            new_archive_signum = facsimile[10]
+            archive_folder = facsimile[8]
+            if old_archive_signum is not None and new_archive_signum is not None and archive_folder is not None:
+                description = old_archive_signum + ", " + new_archive_signum + ", " + archive_folder
+            elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
+                description = old_archive_signum + ", " + new_archive_signum
+            else:
+                description = archive_folder
             external_url = facsimile[14]
             publication_id = facsimile[20]
             first_image = facsimile[11]
