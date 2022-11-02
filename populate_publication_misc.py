@@ -346,11 +346,19 @@ def create_title_part_for_file(original_title):
     title_part = re.sub(r",|\?|!|’|»|”|:|;|\(|\)|\[|\]|\'|\"", "", title_part)
     title_part = title_part.replace("é", "e")
     title_part = title_part.replace("è", "e")
+    title_part = title_part.replace("ê", "e")
+    title_part = title_part.replace("Ê", "E")
     title_part = title_part.replace("É", "E")
+    title_part = title_part.replace("á", "a")
+    title_part = title_part.replace("à", "a")
+    title_part = title_part.replace("À", "A")
     title_part = title_part.replace("ü", "u")
     title_part = title_part.replace("Ü", "U")
-    title_part = title_part.replace("ú", "u")
+    title_part = title_part.replace("ï", "i")
+    title_part = title_part.replace("ô", "o")
     title_part = title_part.replace("æ", "ae")
+    title_part = title_part.replace("œ", "oe")
+    title_part = title_part.replace("ß", "ss")
     title_part = title_part.replace("&", "et")
     title_part = title_part.replace("ø", "o")
     title_part = title_part.replace("Ö", "O")
@@ -360,7 +368,7 @@ def create_title_part_for_file(original_title):
     title_part = title_part.replace("Ä", "A")
     title_part = title_part.replace("ä", "a")
     # shorten long names of files and directories
-    # otherwise the file path will become too long
+    # otherwise the file path may become too long
     if len(title_part) >= 45:
         title_part = title_part[0:44]
     return title_part

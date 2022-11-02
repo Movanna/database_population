@@ -445,18 +445,27 @@ def create_name_part_for_file(person, person_id):
         name_part = forename_letter
     else:
         name_part = surname
-    name_part = re.sub(r",|\?|!|’|»|”|:|;|\(|\)|\[|\]|\'|\"", "", name_part)
     name_part = name_part.replace(". ", "_")
     name_part = name_part.replace(".", "")
     name_part = name_part.replace(" ", "_")
-    name_part = name_part.replace("–", "_")
     name_part = name_part.replace("-", "_")
+    name_part = name_part.replace("–", "_")
+    name_part = re.sub(r",|\?|!|’|»|”|:|;|\(|\)|\[|\]|\'|\"", "", name_part)
     name_part = name_part.replace("é", "e")
     name_part = name_part.replace("è", "e")
+    name_part = name_part.replace("ê", "e")
+    name_part = name_part.replace("Ê", "E")
     name_part = name_part.replace("É", "E")
+    name_part = name_part.replace("á", "a")
+    name_part = name_part.replace("à", "a")
+    name_part = name_part.replace("À", "A")
     name_part = name_part.replace("ü", "u")
-    name_part = name_part.replace("ú", "u")
+    name_part = name_part.replace("Ü", "U")
+    name_part = name_part.replace("ï", "i")
+    name_part = name_part.replace("ô", "o")
     name_part = name_part.replace("æ", "ae")
+    name_part = name_part.replace("œ", "oe")
+    name_part = name_part.replace("ß", "ss")
     name_part = name_part.replace("&", "et")
     name_part = name_part.replace("ø", "o")
     name_part = name_part.replace("Ö", "O")
@@ -466,7 +475,7 @@ def create_name_part_for_file(person, person_id):
     name_part = name_part.replace("Ä", "A")
     name_part = name_part.replace("ä", "a")
     # shorten long names of files and directories
-    # otherwise the file path will become too long
+    # otherwise the file path may become too long
     if len(name_part) >= 45:
         name_part = name_part[0:44]
     return name_part
