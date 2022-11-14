@@ -14,6 +14,12 @@ cursor = conn_db.cursor()
 
 COLLECTION_ID = 1
 DELETED = 0
+# the sv titles are used in all tables except translation_text
+# (and publication_facsimile_collection, if there's an alternative
+# facsimile in Finnish with a fi title)
+# so the language shouldn't be switched to fi unless there's 
+# a need to replace the fi titles in translation_text
+# with the sv ones
 LANGUAGE = "sv"
 
 # fetch the correct up-to-date title and archive signum
