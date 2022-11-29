@@ -87,6 +87,14 @@ def create_sent_publication(COLLECTION_ID, persons_list, sent_letters, name_dict
     for letter in sent_letters:
         published = 1
         category = letter[1]
+        # in this case (sent letters), use this spot for adding
+        # subject.id of the receiver (normally this is where you
+        # define whether this document is written by LM or not)
+        # "x" signifies LM as the writer
+        if letter[2] != "x":
+            person_id = letter[2]
+        else:
+            person_id = None
         # csv is in Finnish, but db has Swedish values for this
         if category in genre_dictionary.keys():
             genre = genre_dictionary[category]
@@ -105,8 +113,12 @@ def create_sent_publication(COLLECTION_ID, persons_list, sent_letters, name_dict
         original_language = original_language.replace("?", "")
         unordered_name = letter[4]
         # register the archive signums, old and new
-        # and the folder signum
-        archive_signum = letter[13] + ", " + letter[10] + ", " + letter[8]
+        # and the archive folder, if present
+        archive_folder = letter[8]
+        if archive_folder is None:
+            archive_signum = letter[13] + ", " + letter[10]
+        else:
+            archive_signum = letter[13] + ", " + letter[10] + ", " + letter[8]
         values_to_insert = (COLLECTION_ID, published, genre, original_publication_date, original_language, archive_signum)
         cursor.execute(insert_query, values_to_insert)
         publication_id = cursor.fetchone()[0]
@@ -114,7 +126,7 @@ def create_sent_publication(COLLECTION_ID, persons_list, sent_letters, name_dict
         # the titles are kept in a different table, translation_text
         # titles contain person info
         # titles contain the date (almost) as it has been recorded originally
-        person_legacy_id, person, title_swe, title_fin, translation_id = update_sent_publication_with_title(publication_id, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain)
+        person_legacy_id, person, title_swe, title_fin, translation_id = update_sent_publication_with_title(publication_id, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id)
         # these are sent letters/telegrams, i.e. someone else than Mechelin received them
         # update_sent_publication_with_title found out who the receiver was
         # create connection between publication and receiver
@@ -122,7 +134,7 @@ def create_sent_publication(COLLECTION_ID, persons_list, sent_letters, name_dict
             event_connection_type = "received telegram"
         else:
             event_connection_type = "received letter"
-        event_id = create_event_and_connection(person_legacy_id, event_connection_type, name_id_dictionary)
+        event_id = create_event_and_connection(person_legacy_id, person_id, event_connection_type, name_id_dictionary)
         # the publication is still a sent one from Mechelin's point of view
         # so let's register that as well when creating the event_occurrence
         if genre == "sänt telegram":
@@ -138,7 +150,7 @@ def create_sent_publication(COLLECTION_ID, persons_list, sent_letters, name_dict
         # these files contain a template and the editors will fill them with content
         # just like the titles, file paths are not kept in table publication
         # update tables translation_text and publication_manuscript with the file paths
-        create_file(directory_path, person, original_publication_date, original_language, publication_id, translation_id, title_swe, title_fin, manuscript_id)
+        create_file(directory_path, person, person_id, original_publication_date, original_language, publication_id, translation_id, title_swe, title_fin, manuscript_id)
         letter.extend((publication_id, title_swe))
         print(letter)
     print("Table publication updated with the new publications.")
@@ -197,12 +209,16 @@ def replace_date(original_date):
 # due to the nature of the csv we started from, all titles are not going to
 # be perfect after this, so some will have to be changed later by hand
 # but hey, this is a humanist project
-def update_sent_publication_with_title(publication_id, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain):
+def update_sent_publication_with_title(publication_id, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id):
     # look for person_legacy_id in dictionary using name as key
     if unordered_name in name_dictionary.keys():
         person_legacy_id = name_dictionary[unordered_name]
-        title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part(persons_list, person_legacy_id)
-    # if name isn't in dictionary, we don't know this person
+        title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part(persons_list, person_legacy_id, person_id)
+    # if there was a person id in the csv
+    elif person_id is not None:
+        person_legacy_id = None        
+        title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part_from_id(person_id)
+    # if name isn't in dictionary and there's no id, we don't know this person
     else:
         person_legacy_id = None
         person = None
@@ -231,20 +247,44 @@ def update_sent_publication_with_title(publication_id, unordered_name, persons_l
     return person_legacy_id, person, title_swe, title_fin, translation_id
 
 # use person_legacy_id to find out the right person
-def construct_publication_title_name_part(persons_list, person_legacy_id):
+def construct_publication_title_name_part(persons_list, person_legacy_id, person_id):
     for person in persons_list:
         legacy_id = person[13]
         if person_legacy_id == legacy_id:
-            title_name_part_swe = construct_swe_name(person)
-            title_name_part_fin = construct_fin_name(person, title_name_part_swe)
+            title_name_part_swe = construct_swe_name(person, person_id)
+            title_name_part_fin = construct_fin_name(person, person_id, title_name_part_swe)
             break
     return title_name_part_swe, title_name_part_fin, person
 
+# if we already had the person's id, fetch name info
+# and check for translated name info too
+def construct_publication_title_name_part_from_id(person_id):
+    fetch_query = """SELECT preposition, last_name, first_name, translation_id FROM subject WHERE id = %s"""
+    value_to_insert = (person_id,)
+    cursor.execute(fetch_query, value_to_insert)
+    person_sv = cursor.fetchone()
+    translation_id = person_sv[3]
+    if translation_id is not None:
+        fetch_query = """SELECT text FROM translation_text WHERE translation_id = %s AND field_name = %s"""
+        field_name = "full_name"
+        values_to_insert = (translation_id, field_name)
+        cursor.execute(fetch_query, values_to_insert)
+        person_fi = cursor.fetchone()
+    else:
+        person_fi = (None,)
+    person = person_sv + person_fi
+    title_name_part_swe = construct_swe_name(person, person_id)
+    title_name_part_fin = construct_fin_name(person, person_id, title_name_part_swe)
+    return title_name_part_swe, title_name_part_fin, person
+
 # get swe name info for the person chosen
-def construct_swe_name(person):
-    prefix = person[1]
-    surname = person[2]
-    forename_letter = person[7]
+def construct_swe_name(person, person_id):
+    if person_id is None:
+        prefix = person[1]
+        surname = person[2]
+        forename_letter = person[7]
+    else:
+        (prefix, surname, forename_letter, translation_id, full_name_fi) = person
     if forename_letter and prefix and surname:
         title_name_part_swe = forename_letter + " " + prefix + " " + surname
     elif forename_letter and surname:
@@ -256,25 +296,32 @@ def construct_swe_name(person):
     return title_name_part_swe
 
 # get fin name info for the person chosen
-def construct_fin_name(person, title_name_part_swe):
-    prefix = person[1]
-    surname = person[2]
-    surname_fi = person[3]
-    forename_fi = person[4]
-    if forename_fi and prefix and surname_fi:
-        title_name_part_fin = forename_fi + " " + prefix + " " + surname_fi
-    elif forename_fi and prefix:
-        title_name_part_fin = forename_fi + " " + prefix + " " + surname
-    elif forename_fi and surname_fi:
-        title_name_part_fin = forename_fi + " " + surname_fi
-    elif forename_fi and surname:
-        title_name_part_fin = forename_fi + " " + surname
-    elif forename_fi:
-        title_name_part_fin = forename_fi
-    # there are no cases with only surname_fi, so no need to check for that
-    # if there are no Finnish name parts, the Swedish version is to be used
+def construct_fin_name(person, person_id, title_name_part_swe):
+    if person_id is None:
+        prefix = person[1]
+        surname = person[2]
+        surname_fi = person[3]
+        forename_fi = person[4]
+        if forename_fi and prefix and surname_fi:
+            title_name_part_fin = forename_fi + " " + prefix + " " + surname_fi
+        elif forename_fi and prefix:
+            title_name_part_fin = forename_fi + " " + prefix + " " + surname
+        elif forename_fi and surname_fi:
+            title_name_part_fin = forename_fi + " " + surname_fi
+        elif forename_fi and surname:
+            title_name_part_fin = forename_fi + " " + surname
+        elif forename_fi:
+            title_name_part_fin = forename_fi
+        # there are no cases with only surname_fi, so no need to check for that
+        # if there are no Finnish name parts, the Swedish version is to be used
+        else:
+            title_name_part_fin = title_name_part_swe
     else:
-        title_name_part_fin = title_name_part_swe
+        full_name_fi = person[4]
+        if full_name_fi:
+            title_name_part_fin = full_name_fi
+        else:
+            title_name_part_fin = title_name_part_swe            
     return title_name_part_fin
 
 # populate table translation
@@ -297,7 +344,7 @@ def create_translation_text(translation_id, text_swe, text_fin, field_name, tabl
     cursor.execute(insert_query, values_to_insert_fin)
 
 # create connection between publication and subject (the receiver of the letter)
-def create_event_and_connection(person_legacy_id, event_connection_type, name_id_dictionary):
+def create_event_and_connection(person_legacy_id, person_id, event_connection_type, name_id_dictionary):
     insert_query = """INSERT INTO event(type) VALUES(%s) RETURNING id"""
     event_type = "published"
     value_to_insert = (event_type,)
@@ -307,6 +354,9 @@ def create_event_and_connection(person_legacy_id, event_connection_type, name_id
         insert_query = """INSERT INTO event_connection(subject_id, event_id, type) VALUES(%s, %s, %s)"""
         subject_id = name_id_dictionary[person_legacy_id]
         subject_id = int(subject_id)
+        values_to_insert = (subject_id, event_id, event_connection_type)
+    elif person_id:
+        subject_id = int(person_id)
         values_to_insert = (subject_id, event_id, event_connection_type)
     else:
         insert_query = """INSERT INTO event_connection(event_id, type) VALUES(%s, %s)"""
@@ -340,10 +390,10 @@ def create_directory(directory):
 # otherwise the sv file path goes there
 # create files and directories and update translation_text and
 # publication_manuscript with file paths
-def create_file(directory_path, person, original_publication_date, original_language, publication_id, translation_id, title_swe, title_fin, manuscript_id):
+def create_file(directory_path, person, person_id, original_publication_date, original_language, publication_id, translation_id, title_swe, title_fin, manuscript_id):
     # files and directories for letters contain the writer's name 
     if person:
-        name_part = create_name_part_for_file(person)
+        name_part = create_name_part_for_file(person, person_id)
     else:
         name_part = "X_X"
     # files and directories contain the publication's date
@@ -383,10 +433,13 @@ def create_file(directory_path, person, original_publication_date, original_lang
 # file and directory names contain a person's name,
 # but not in the same order as in the publication title,
 # and with certain replacements
-def create_name_part_for_file(person):
-    prefix = person[1]
-    surname = person[2]
-    forename_letter = person[7]
+def create_name_part_for_file(person, person_id):
+    if person_id is None:
+        prefix = person[1]
+        surname = person[2]
+        forename_letter = person[7]
+    else:
+        (prefix, surname, forename_letter, translation_id, full_name_fi) = person  
     if forename_letter and prefix and surname:
         name_part = prefix + "_" + surname + "_" + forename_letter
     elif forename_letter and surname:
@@ -412,7 +465,9 @@ def create_name_part_for_file(person):
     name_part = name_part.replace("ü", "u")
     name_part = name_part.replace("Ü", "U")
     name_part = name_part.replace("ï", "i")
+    name_part = name_part.replace("í", "i")
     name_part = name_part.replace("ô", "o")
+    name_part = name_part.replace("ó", "o")
     name_part = name_part.replace("æ", "ae")
     name_part = name_part.replace("œ", "oe")
     name_part = name_part.replace("ß", "ss")
