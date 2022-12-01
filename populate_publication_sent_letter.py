@@ -184,6 +184,16 @@ def replace_date(original_date):
             day = match_string.group(1).zfill(2)
             date = year + "-" + month + "-" + day
             found = True
+        # for cases where original_date was e.g. 18.?.1885
+        # and the ? got removed earlier in this function
+        if not found:
+            search_string = re.compile(r"^(\d{1,2})\.\.(\d{4})")
+            match_string = re.search(search_string, original_date)
+            if match_string:
+                year = match_string.group(2)
+                day = match_string.group(1).zfill(2)
+                date = year + "-XX-" + day
+                found = True
         if not found:
             search_string = re.compile(r"^(\d{1,2})\.(\d{4})")
             match_string = re.search(search_string, original_date)
@@ -210,28 +220,40 @@ def replace_date(original_date):
 # be perfect after this, so some will have to be changed later by hand
 # but hey, this is a humanist project
 def update_sent_publication_with_title(publication_id, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id):
-    # look for person_legacy_id in dictionary using name as key
-    if unordered_name in name_dictionary.keys():
-        person_legacy_id = name_dictionary[unordered_name]
-        title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part(persons_list, person_legacy_id, person_id)
-    # if there was a person id in the csv
-    elif person_id is not None:
+    # if the person's id was in the csv
+    if person_id is not None:
         person_legacy_id = None        
         title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part_from_id(person_id)
+    # else look for person_legacy_id in dictionary using name as key
+    elif unordered_name in name_dictionary.keys():
+        person_legacy_id = name_dictionary[unordered_name]
+        title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part(persons_list, person_legacy_id, person_id)
     # if name isn't in dictionary and there's no id, we don't know this person
     else:
         person_legacy_id = None
         person = None
         title_name_part_swe = "okänd"
         title_name_part_fin = "tuntematon"
-    # make some slight changes to original_date, if needed, since it'll be part of a title
-    # if there's some uncertainty about the date, add a standard phrase
-    original_date = original_date.replace("/", ".")
+    # make some slight changes to original_date, if needed,
+    # since it'll be part of a title
+    # an original_date written as 1/13.11.1885 means that the document
+    # has both an old style (Julian) and a new style (Gregorian) date
+    # in that case we'll use the Gregorian (modern) one,
+    # which is the one on the right side of the slash
+    search_string = re.compile(r".*/")
+    original_date = search_string.sub("", original_date)
     if no_date is True:
         title_swe = "odaterat" + " LM–" + title_name_part_swe
         title_fin = "päiväämätön" + " LM–" + title_name_part_fin
+    # if there's some uncertainty about the date, add a standard phrase
+    # and leave the ? only if it signifies "month unknown"
     elif date_uncertain is True:
         original_date = original_date.replace("?", "")
+        search_string = re.compile(r"\.\.")
+        original_date = search_string.sub(".?.", original_date)
+        search_string = re.compile(r"^\.")
+        original_date = search_string.sub("", original_date)
+        original_date = search_string.sub("", original_date)
         title_swe = "ca " + original_date + " LM–" + title_name_part_swe
         title_fin = "n. " + original_date + " LM–" + title_name_part_fin
     else:
