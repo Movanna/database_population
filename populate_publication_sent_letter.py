@@ -115,7 +115,7 @@ def create_sent_publication(COLLECTION_ID, persons_list, sent_letters, name_dict
         # register the archive signums, old and new
         # and the archive folder, if present
         archive_folder = letter[8]
-        if archive_folder is None:
+        if archive_folder == "KA" or archive_folder is None:
             archive_signum = letter[13] + ", " + letter[10]
         else:
             archive_signum = letter[13] + ", " + letter[10] + ", " + letter[8]
@@ -476,6 +476,8 @@ def create_name_part_for_file(person, person_id):
     name_part = name_part.replace("-", "_")
     name_part = name_part.replace("–", "_")
     name_part = re.sub(r",|\?|!|’|»|”|:|;|\(|\)|\[|\]|\'|\"", "", name_part)
+    name_part = name_part.replace("ç", "c")
+    name_part = name_part.replace("Ç", "C")
     name_part = name_part.replace("é", "e")
     name_part = name_part.replace("è", "e")
     name_part = name_part.replace("ê", "e")
@@ -485,6 +487,7 @@ def create_name_part_for_file(person, person_id):
     name_part = name_part.replace("à", "a")
     name_part = name_part.replace("À", "A")
     name_part = name_part.replace("ü", "u")
+    name_part = name_part.replace("ú", "u")
     name_part = name_part.replace("Ü", "U")
     name_part = name_part.replace("ï", "i")
     name_part = name_part.replace("í", "i")
@@ -503,8 +506,8 @@ def create_name_part_for_file(person, person_id):
     name_part = name_part.replace("ä", "a")
     # shorten long names of files and directories
     # otherwise the file path may become too long
-    if len(name_part) >= 45:
-        name_part = name_part[0:44]
+    if len(name_part) >= 40:
+        name_part = name_part[0:39]
     return name_part
 
 # the XML files contain a template with the publication's title

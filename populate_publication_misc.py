@@ -109,7 +109,7 @@ def create_misc_publication(COLLECTION_ID, misc_publications, genre_dictionary, 
         old_archive_signum = publication[13]
         new_archive_signum = publication[10]
         archive_folder = publication[8]
-        if old_archive_signum is not None and new_archive_signum is not None and archive_folder is not None:
+        if old_archive_signum is not None and new_archive_signum is not None and archive_folder is not None and archive_folder != "KA":
             archive_signum = old_archive_signum + ", " + new_archive_signum + ", " + archive_folder
         elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
             archive_signum = old_archive_signum + ", " + new_archive_signum
@@ -191,6 +191,16 @@ def replace_date(original_date):
             day = match_string.group(1).zfill(2)
             date = year + "-" + month + "-" + day
             found = True
+        # for cases where original_date was e.g. 18.?.1885
+        # and the ? got removed earlier in this function
+        if not found:
+            search_string = re.compile(r"^(\d{1,2})\.\.(\d{4})")
+            match_string = re.search(search_string, original_date)
+            if match_string:
+                year = match_string.group(2)
+                day = match_string.group(1).zfill(2)
+                date = year + "-XX-" + day
+                found = True
         if not found:
             search_string = re.compile(r"^(\d{1,2})\.(\d{4})")
             match_string = re.search(search_string, original_date)
@@ -222,8 +232,12 @@ def add_title(publication_id, original_date, no_date, date_uncertain, original_t
     if no_date is True:
         title_swe = "odaterad " + original_title
         title_fin = "päiväämätön " + original_title
+    # if there's some uncertainty about the date, add a standard phrase
+    # and leave the ? only if it signifies "month unknown"
     elif date_uncertain is True:
         original_date = original_date.replace("?", "")
+        search_string = re.compile(r"\.\.")
+        original_date = search_string.sub(".?.", original_date)
         title_swe = "ca " + original_date + " " + original_title
         title_fin = "n. " + original_date + " " + original_title
     else:
@@ -344,29 +358,34 @@ def create_title_part_for_file(original_title):
     title_part = title_part.replace("-", "_")
     title_part = title_part.replace("–", "_")
     title_part = re.sub(r",|\?|!|’|»|”|:|;|\(|\)|\[|\]|\'|\"", "", title_part)
-    title_part = title_part.replace("é", "e")
-    title_part = title_part.replace("è", "e")
-    title_part = title_part.replace("ê", "e")
-    title_part = title_part.replace("Ê", "E")
-    title_part = title_part.replace("É", "E")
-    title_part = title_part.replace("á", "a")
-    title_part = title_part.replace("à", "a")
-    title_part = title_part.replace("À", "A")
-    title_part = title_part.replace("ü", "u")
-    title_part = title_part.replace("Ü", "U")
-    title_part = title_part.replace("ï", "i")
-    title_part = title_part.replace("ô", "o")
-    title_part = title_part.replace("æ", "ae")
-    title_part = title_part.replace("œ", "oe")
-    title_part = title_part.replace("ß", "ss")
-    title_part = title_part.replace("&", "et")
-    title_part = title_part.replace("ø", "o")
-    title_part = title_part.replace("Ö", "O")
-    title_part = title_part.replace("ö", "o")
-    title_part = title_part.replace("Å", "A")
-    title_part = title_part.replace("å", "a")
-    title_part = title_part.replace("Ä", "A")
-    title_part = title_part.replace("ä", "a")
+    name_part = name_part.replace("ç", "c")
+    name_part = name_part.replace("Ç", "C")
+    name_part = name_part.replace("é", "e")
+    name_part = name_part.replace("è", "e")
+    name_part = name_part.replace("ê", "e")
+    name_part = name_part.replace("Ê", "E")
+    name_part = name_part.replace("É", "E")
+    name_part = name_part.replace("á", "a")
+    name_part = name_part.replace("à", "a")
+    name_part = name_part.replace("À", "A")
+    name_part = name_part.replace("ü", "u")
+    name_part = name_part.replace("ú", "u")
+    name_part = name_part.replace("Ü", "U")
+    name_part = name_part.replace("ï", "i")
+    name_part = name_part.replace("í", "i")
+    name_part = name_part.replace("ô", "o")
+    name_part = name_part.replace("ó", "o")
+    name_part = name_part.replace("æ", "ae")
+    name_part = name_part.replace("œ", "oe")
+    name_part = name_part.replace("ß", "ss")
+    name_part = name_part.replace("&", "et")
+    name_part = name_part.replace("ø", "o")
+    name_part = name_part.replace("Ö", "O")
+    name_part = name_part.replace("ö", "o")
+    name_part = name_part.replace("Å", "A")
+    name_part = name_part.replace("å", "a")
+    name_part = name_part.replace("Ä", "A")
+    name_part = name_part.replace("ä", "a")
     # shorten long names of files and directories
     # otherwise the file path may become too long
     if len(title_part) >= 45:

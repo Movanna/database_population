@@ -70,10 +70,12 @@ def create_publication_facsimile_collection(facsimiles):
         # this is a publication with 1 facsimile
         if len(facsimile) == 21:
             title = facsimile[20]
+            # register the archive signums, old and new
+            # and the archive folder, if present
             old_archive_signum = facsimile[13]
             new_archive_signum = facsimile[10]
             archive_folder = facsimile[8]
-            if old_archive_signum is not None and new_archive_signum is not None and archive_folder is not None:
+            if old_archive_signum is not None and new_archive_signum is not None and archive_folder is not None and archive_folder != "KA":
                 description = old_archive_signum + ", " + new_archive_signum + ", " + archive_folder
             elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
                 description = old_archive_signum + ", " + new_archive_signum
@@ -91,7 +93,7 @@ def create_publication_facsimile_collection(facsimiles):
             old_archive_signum = facsimile[13]
             new_archive_signum = facsimile[10]
             archive_folder = facsimile[8]
-            if old_archive_signum is not None and new_archive_signum is not None and archive_folder is not None:
+            if old_archive_signum is not None and new_archive_signum is not None and archive_folder is not None and archive_folder != "KA":
                 description = old_archive_signum + ", " + new_archive_signum + ", " + archive_folder
             elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
                 description = old_archive_signum + ", " + new_archive_signum
