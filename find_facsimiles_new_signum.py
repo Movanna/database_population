@@ -1,26 +1,33 @@
 # This script finds out which images belong to which document,
 # and then stores the file paths to those images.
-#
+
 # The starting point is a csv file with info about the publication
 # and its images. The first and last image signum of each publication's
 # facsimile is in the file, but we need to modify the signums a bit.
 # We have image folders named after the archive signums,
 # and images named after the image signums, but we don't want to
 # have to go through those folders and images by hand.
-#
+
 # Furthermore, the archive which digitized the images has changed
 # its way of creating folder signums. These publications use the
 # new signum, others use the old. Both signums should be registered
 # for each publication. We already made a dictionary of old and new
 # signums.
-#
+
 # The output is a csv containing more info than before for each
 # publication: the old and new folder signum, the first and last
 # image signum and the file paths to the images. This csv will be
 # used for populating table publication as well as for creating the
 # facsimile folder and its images and connecting the folder to the
 # publication.
-#
+
+# We can either create the list of all possible image file paths
+# from the given facsimile folder path, and then save the newly created
+# list as a txt file for later use, or we can use a txt file created
+# earlier and read it into a list. If no images have been added to the
+# facsimile folder recently, reading the file paths from file instead of
+# creating the list from scratch speeds up this script a lot.
+
 # Sample input and output (CSV) at end of file.
 
 import re
@@ -29,6 +36,7 @@ from pathlib import Path
 
 CSV_IN = "csv/documents_2.csv"
 CSV_OUT = "csv/documents_2_facsimiles.csv"
+FACSIMILE_FILE_PATHS = "new_signum_facsimile_file_paths.txt"
 FACSIMILE_FOLDERS = ["M:/Facsimiles/Mechelin_1", "M:/Facsimiles/Mechelin_2", "M:/Facsimiles/Mechelin_3"]
 
 # create a list from the original csv file 
@@ -58,20 +66,45 @@ def write_list_to_csv(list, filename):
 
 # create path object for folder from given filepath string,
 # save all paths to files found in this folder or subfolders in a list
-def create_file_list(filepath):
-    filelist = []
-    for path in filepath:
+def create_file_list(folder_path):
+    file_list = []
+    for path in folder_path:
         path = Path(path)
-        iterate_through_folders(path, filelist)
-    return filelist
+        iterate_through_folders(path, file_list)
+    print("List of image file paths created.")
+    return file_list
 
 # iterate through folders recursively and append filepaths to list
-def iterate_through_folders(path, filelist):
+def iterate_through_folders(path, file_list):
     for content in path.iterdir():
         if content.is_dir():
-            iterate_through_folders(content, filelist)
+            iterate_through_folders(content, file_list)
         else:
-            filelist.append(content)
+            file_list.append(content)
+
+# save the list of all facsimile file paths as a file
+# thus the script runs faster next time
+def write_list_to_text_file(file_list, filename):
+    with open(filename, "w", encoding="utf-8-sig") as output_file:
+        for path in file_list:
+            output_file.write(path.as_posix())
+            output_file.write('\n')
+        print("List of facsimile file paths written to file", filename)
+
+# if a file containing all facsimile file paths
+# has already been created:
+# read that file into a list
+def read_list_from_file(filename):
+    with open(filename, encoding="utf-8-sig") as source_file:
+        data = source_file.read()
+        data_list = data.split("\n")
+        source_file.close()
+        file_list = []
+        for path in data_list:
+            path = Path(path)
+            file_list.append(path)
+        print("List of facsimile file paths created from file.")
+        return file_list
 
 # we need to find the folder signum as well as
 # the signum/number of the first and last image
@@ -198,8 +231,15 @@ def find_old_folder_signum(folder_signum, signum_dictionary):
 def main():
     # info about publications
     info_list = create_list_from_csv(CSV_IN)
-    # get facsimile file paths
-    file_list = create_file_list(FACSIMILE_FOLDERS)
+    # get a list of all facsimile file paths,
+    # either from an existing txt file
+    # or by creating the list from scratch
+    # and saving it as a txt file for later use
+    if FACSIMILE_FILE_PATHS != "":
+        file_list = read_list_from_file(FACSIMILE_FILE_PATHS)
+    else:
+        file_list = create_file_list(FACSIMILE_FOLDERS)
+        write_list_to_text_file(file_list, "new_signum_facsimile_file_paths.txt")
     # old and new folder signums from dictionary
     signum_dictionary = read_dict_from_file("dictionaries/signum_dictionary.json")
     # append folder signum, first and last image signum,
