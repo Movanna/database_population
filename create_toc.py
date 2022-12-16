@@ -21,14 +21,27 @@ cursor = conn_db.cursor()
 # in the toc file
 COLLECTION_ID = 1
 COLLECTION_NAME = "delutgåva 1"
-PUBLISHED = 1
+# this value is either 0 (unpublished), 1 (internally published)
+# or 2 (internally & externally published)
+# we want to make tocs either for the internal site (values 1, 2)
+# or for the external site (value 2)
+# therefore PUBLISHED is always a list, containing either one
+# or two values
+PUBLISHED = [1, 2]
 DELETED = 0
 TRANSLATION_TEXT_LANGUAGE = "sv"
 
 # get the relevant info for all publications in a collection
 def get_publication_info():
-    fetch_query = """SELECT publication.id, publication_group_id, published_by, genre, original_publication_date, text, publication.translation_id, field_name FROM publication, translation_text WHERE publication.translation_id = translation_text.translation_id AND (field_name = %s OR field_name = %s) AND table_name = %s AND publication_collection_id = %s AND publication.published = %s AND publication.deleted = %s AND language = %s"""
-    values_to_insert = ("name", "subtitle", "publication", COLLECTION_ID, PUBLISHED, DELETED, TRANSLATION_TEXT_LANGUAGE)
+    # toc for the external site
+    if len(PUBLISHED) == 1:
+        fetch_query = """SELECT publication.id, publication_group_id, published_by, genre, original_publication_date, text, publication.translation_id, field_name FROM publication, translation_text WHERE publication.translation_id = translation_text.translation_id AND (field_name = %s OR field_name = %s) AND table_name = %s AND publication_collection_id = %s AND publication.published = %s AND publication.deleted = %s AND language = %s"""
+        values_to_insert = ("name", "subtitle", "publication", COLLECTION_ID, PUBLISHED[0], DELETED, TRANSLATION_TEXT_LANGUAGE)
+    # toc for the internal site
+    else:
+        fetch_query = """SELECT publication.id, publication_group_id, published_by, genre, original_publication_date, text, publication.translation_id, field_name FROM publication, translation_text WHERE publication.translation_id = translation_text.translation_id AND (field_name = %s OR field_name = %s) AND table_name = %s AND publication_collection_id = %s AND (publication.published = %s OR publication.published = %s) AND publication.deleted = %s AND language = %s"""
+        values_to_insert = ("name", "subtitle", "publication", COLLECTION_ID, PUBLISHED[0], PUBLISHED[1], DELETED, TRANSLATION_TEXT_LANGUAGE)
+    cursor.execute(fetch_query, values_to_insert)
     cursor.execute(fetch_query, values_to_insert)
     publication_info = cursor.fetchall()
     # sort the list of tuples according to group, date, id

@@ -29,6 +29,7 @@ cursor = conn_db.cursor()
 COLLECTION_ID = 2
 XML_OUTPUT_FOLDER = "documents/Delutgava_2/Verk"
 GENRE = "verk"
+NEWSPAPER_PART_WITHOUT_COMMA = False
 CSV_IN = "csv/Verk_2.csv"
 CSV_OUT = "csv/Verk_2_id.csv"
 
@@ -71,8 +72,10 @@ def create_article_publication(articles):
         original_language = "sv"
         newspaper = article[0]
         newspaper_part = article[3]
-        if newspaper_part != None:
+        if newspaper_part != None and NEWSPAPER_PART_WITHOUT_COMMA is False:
             published_by = newspaper + " " + original_date + ", " + newspaper_part
+        elif newspaper_part != None and NEWSPAPER_PART_WITHOUT_COMMA is True:
+            published_by = newspaper + " " + original_date + newspaper_part
         else:
             published_by = newspaper + " " + original_date
         original_title = article[2]
