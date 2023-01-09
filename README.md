@@ -11,7 +11,7 @@ The database contains information about editions (i.e. collections of texts), te
 
 **The main achievement of the scripts in this repo** is that the db has been populated entirely by them. Some smaller corrections are naturally made continuously in the db, but otherwise everything is added by running the scripts and not by hand. Also, the spreadsheets that contain the original info about the documents were made by others before there was any notion of the db and its structure. Initially, only (parts of) the file name of the first image for each document was recorded, and senders/receivers of letters were recorded in multiple ways. In short, there was a lot of unstructured data, and I had to find ways of sorting it and extracting the useful bits. I am pleased with how neatly persons, different language versions of a text, images and metadata are now all connected and files created. This enables a great digital edition and a fully functioning workflow where no one has to do unnecessary work.
 
-**All scripts written by me**, Anna Movall, in 2021–2022, except for two functions in populate_facsimile_collection.py and the whole of fetch_facsimile_metadata.py (which I'm still the co-author of). I thus also **planned the resulting workflow for the project**, because the digital publishing platform holds no solution whatsoever for that, it just provides the general backend and frontend.
+I thus **planned the entire digital workflow for the project**, because the digital publishing platform holds no solution whatsoever for that, it just provides the general backend and frontend including the database structure.
 
 For the next step in the process of publishing these texts using the digital edition platform, see my repo transform_texts.
 
