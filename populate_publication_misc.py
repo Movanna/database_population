@@ -94,6 +94,7 @@ def create_misc_publication(COLLECTION_ID, misc_publications, genre_dictionary, 
         ms_or_print = publication[3]
         original_title = publication[4]
         language = publication[7]
+        # register the language(s)
         original_language, language_for_db = register_language(language, language_dictionary)
         # register the archive signums, old and new
         # and, if present, the folder signum
@@ -194,11 +195,23 @@ def replace_date(original_date):
             if match_string:
                 date = match_string.group(0)
                 date = date + "-XX-XX"
+        # for cases where original_date is e.g. "1880-talet"
+        # i.e. the 1880s: the year should be recorded as 188X
+        if not found:
+            search_string = re.compile(r"(\d{3})(\d{1})-tal")
+            match_string = re.search(search_string, original_date)
+            if match_string:
+                date = match_string.group(1)
+                date = date + "X-XX-XX"
     if original_date == "" or original_date is None:
         date_uncertain = False
         no_date = True
     return date, no_date, date_uncertain
 
+# there can be several languages for one publication
+# meaning that the text e.g. can start off in Swedish
+# and then continue in French
+# all languages for a publication are recorded in the db
 def register_language(language, language_dictionary):
     original_language = []
     if language is None:
@@ -394,7 +407,9 @@ def create_title_part_for_file(original_title):
     title_part = title_part.replace(" ", "_")
     title_part = title_part.replace("-", "_")
     title_part = title_part.replace("–", "_")
-    title_part = re.sub(r",|\?|!|’|»|”|:|;|\(|\)|\[|\]|\'|\"", "", title_part)
+    title_part = title_part.replace("+", "_")
+    title_part = title_part.replace("/", "_")
+    title_part = re.sub(r",|\?|!|’|»|”|:|;|\(|\)|\[|\]|§|\'|\"", "", title_part)
     title_part = title_part.replace("ç", "c")
     title_part = title_part.replace("Ç", "C")
     title_part = title_part.replace("é", "e")
