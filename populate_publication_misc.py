@@ -317,6 +317,17 @@ def create_event_and_connection(subject_id, LM_is_co_author, event_connection_ty
     value_to_insert = (event_type,)
     cursor.execute(insert_query, value_to_insert)
     event_id = cursor.fetchone()[0]
+    # check if this person exists in the db
+    # if not: replace id with id for "unknown person"
+    # thus handling e.g. typos in subject_id:s in the csv
+    # or a test db with different values than the production db
+    fetch_query = """SELECT id FROM subject WHERE id = %s"""
+    value_to_insert = (subject_id,)
+    cursor.execute(fetch_query, value_to_insert)
+    subject_exists = cursor.fetchone()
+    if subject_exists is None:
+        print("Person with id " + str(subject_id) + " not in db!")
+        subject_id = 1912
     insert_query = """INSERT INTO event_connection(subject_id, event_id, type) VALUES(%s, %s, %s)"""
     values_to_insert = (subject_id, event_id, event_connection_type)
     if LM_is_co_author is False:
@@ -427,6 +438,7 @@ def create_title_part_for_file(original_title):
     title_part = title_part.replace("í", "i")
     title_part = title_part.replace("ô", "o")
     title_part = title_part.replace("ó", "o")
+    title_part = title_part.replace("ō", "o")
     title_part = title_part.replace("æ", "ae")
     title_part = title_part.replace("œ", "oe")
     title_part = title_part.replace("ß", "ss")
