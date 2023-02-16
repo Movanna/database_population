@@ -117,6 +117,10 @@ def create_sent_publication(COLLECTION_ID, persons_list, sent_letters, name_dict
         archive_folder = letter[8]
         if archive_folder == "KA" or archive_folder is None:
             archive_signum = letter[13] + ", " + letter[10]
+        # this signifies another person's archive than Mechelin's
+        # it has no old folder signum, just the new signum + the archive folder
+        elif "RM" in archive_folder:
+            archive_signum = letter[10] + ", " + letter[8]
         else:
             archive_signum = letter[13] + ", " + letter[10] + ", " + letter[8]
         values_to_insert = (COLLECTION_ID, published, genre, original_publication_date, original_language, archive_signum)
