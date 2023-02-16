@@ -223,7 +223,7 @@ def find_old_folder_signum(folder_signum, signum_dictionary):
         if folder_signum == value:
             old_folder_signum = key
             break
-    if not old_folder_signum:
+    if folder_signum not in signum_dictionary.keys() or not old_folder_signum:
         print(folder_signum + " not found in signum_dictionary.")
         old_folder_signum = ""
     return old_folder_signum
