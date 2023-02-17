@@ -50,11 +50,11 @@ def create_list_from_csv(filename):
             list.append(elements)
             print(len(elements))
             # get rid of empty value at the end of each list
-            if len(elements) == 19:
-                elements.pop(18)
-            # if this is the row's length, then there's an alternative facsimile
             if len(elements) == 20:
                 elements.pop(19)
+            # if this is the row's length, then there's an alternative facsimile
+            if len(elements) == 21:
+                elements.pop(20)
         return list
 
 # get dictionary content from file
@@ -94,7 +94,7 @@ def create_poem_publication(COLLECTION_ID, poems, genre_dictionary, language_dic
         author = poem[2]
         ms_or_print = poem[3]
         original_title = poem[4]
-        language = poem[6]
+        language = poem[7]
         if language in language_dictionary.keys():
             original_language = language_dictionary[language]
         elif language is None:
@@ -103,7 +103,18 @@ def create_poem_publication(COLLECTION_ID, poems, genre_dictionary, language_dic
             original_language = language
         original_language = original_language.replace("?", "")
         # register the archive signums, old and new
-        archive_signum = poem[12] + ", " + poem[9]
+        # and, if present, the folder signum
+        # if the document isn't from the National Archive it only has
+        # what compares to a folder signum
+        old_archive_signum = poem[13]
+        new_archive_signum = poem[10]
+        archive_folder = poem[8]
+        if old_archive_signum is not None and new_archive_signum is not None and archive_folder is not None and archive_folder != "KA":
+            archive_signum = old_archive_signum + ", " + new_archive_signum + ", " + archive_folder
+        elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
+            archive_signum = old_archive_signum + ", " + new_archive_signum
+        else:
+            archive_signum = archive_folder
         values_to_insert = (COLLECTION_ID, published, genre, original_publication_date, original_language, archive_signum)
         cursor.execute(insert_query, values_to_insert)
         publication_id = cursor.fetchone()[0]
@@ -116,7 +127,7 @@ def create_poem_publication(COLLECTION_ID, poems, genre_dictionary, language_dic
         # is the author; no "x" means the author isn't recorded
         # if Mechelin isn't the author of this poem:
         # create connection between publication and the entry for "unknown person"
-        # Mechelin being the author is never registered in the db,
+        # Mechelin being the sole author is never registered in the db,
         # his authorship is implicit
         if author != "x":
             # id for "unknown"
@@ -129,7 +140,8 @@ def create_poem_publication(COLLECTION_ID, poems, genre_dictionary, language_dic
             create_event_occurrence(publication_id, event_id, event_occurrence_type)
         # if this value is "m", it means this publication is a manuscript
         # populate table publication_manuscript
-        if ms_or_print == "m":
+        if ms_or_print == "m" or ms_or_print is None:
+            # type 1 = letter, 2 = poem, 3 = misc
             manuscript_type = 2
             manuscript_id = create_publication_manuscript(publication_id, published, manuscript_type, archive_signum, original_language, title_swe)
         else:
@@ -173,6 +185,16 @@ def replace_date(original_date):
             day = match_string.group(1).zfill(2)
             date = year + "-" + month + "-" + day
             found = True
+        # for cases where original_date was e.g. 18.?.1885
+        # and the ? got removed earlier in this function
+        if not found:
+            search_string = re.compile(r"^(\d{1,2})\.\.(\d{4})")
+            match_string = re.search(search_string, original_date)
+            if match_string:
+                year = match_string.group(2)
+                day = match_string.group(1).zfill(2)
+                date = year + "-XX-" + day
+                found = True
         if not found:
             search_string = re.compile(r"^(\d{1,2})\.(\d{4})")
             match_string = re.search(search_string, original_date)
@@ -187,6 +209,14 @@ def replace_date(original_date):
             if match_string:
                 date = match_string.group(0)
                 date = date + "-XX-XX"
+        # for cases where original_date is e.g. "1880-talet"
+        # i.e. the 1880s: the year should be recorded as 188X
+        if not found:
+            search_string = re.compile(r"(\d{3})(\d{1})-tal")
+            match_string = re.search(search_string, original_date)
+            if match_string:
+                date = match_string.group(1)
+                date = date + "X-XX-XX"
     if original_date == "" or original_date is None:
         date_uncertain = False
         no_date = True
@@ -199,12 +229,17 @@ def replace_date(original_date):
 def add_title(publication_id, original_date, no_date, date_uncertain, original_title):
     # make some slight changes to original_date, if needed, since it'll be part of a title
     # if there's some uncertainty about the date, add a standard phrase
-    original_date = original_date.replace("/", ".")
+    if original_date is not None:
+        original_date = original_date.replace("/", ".")
     if no_date is True:
         title_swe = "odaterad " + original_title
         title_fin = "päiväämätön " + original_title
+    # if there's some uncertainty about the date, add a standard phrase
+    # and leave the ? only if it signifies "month unknown"
     elif date_uncertain is True:
         original_date = original_date.replace("?", "")
+        search_string = re.compile(r"\.\.")
+        original_date = search_string.sub(".?.", original_date)
         title_swe = "ca " + original_date + " " + original_title
         title_fin = "n. " + original_date + " " + original_title
     else:
@@ -321,7 +356,9 @@ def create_title_part_for_file(original_title):
     title_part = title_part.replace(" ", "_")
     title_part = title_part.replace("-", "_")
     title_part = title_part.replace("–", "_")
-    title_part = re.sub(r",|\?|!|’|»|”|:|;|\(|\)|\[|\]|\'|\"", "", title_part)
+    title_part = title_part.replace("+", "_")
+    title_part = title_part.replace("/", "_")
+    title_part = re.sub(r",|\?|!|’|»|”|:|;|\(|\)|\[|\]|§|\'|\"", "", title_part)
     title_part = title_part.replace("ç", "c")
     title_part = title_part.replace("Ç", "C")
     title_part = title_part.replace("é", "e")
@@ -339,6 +376,7 @@ def create_title_part_for_file(original_title):
     title_part = title_part.replace("í", "i")
     title_part = title_part.replace("ô", "o")
     title_part = title_part.replace("ó", "o")
+    title_part = title_part.replace("ō", "o")
     title_part = title_part.replace("æ", "ae")
     title_part = title_part.replace("œ", "oe")
     title_part = title_part.replace("ß", "ss")
