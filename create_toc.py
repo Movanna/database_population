@@ -42,7 +42,6 @@ def get_publication_info():
         fetch_query = """SELECT publication.id, publication_group_id, published_by, genre, original_publication_date, text, publication.translation_id, field_name FROM publication, translation_text WHERE publication.translation_id = translation_text.translation_id AND (field_name = %s OR field_name = %s) AND table_name = %s AND publication_collection_id = %s AND (publication.published = %s OR publication.published = %s) AND publication.deleted = %s AND language = %s"""
         values_to_insert = ("name", "subtitle", "publication", COLLECTION_ID, PUBLISHED[0], PUBLISHED[1], DELETED, TRANSLATION_TEXT_LANGUAGE)
     cursor.execute(fetch_query, values_to_insert)
-    cursor.execute(fetch_query, values_to_insert)
     publication_info = cursor.fetchall()
     # sort the list of tuples according to group, date, id
     # and field_name (the latter two needed for separating subtitles)
@@ -102,12 +101,27 @@ def create_dictionary(publication_info_sorted):
         elif next_tuple is not None and next_field_name == "subtitle" and publication_id == next_tuple_id:
             subtitle = next_tuple[5]
             toc_item_dict = {"url": "", "type": "est", "text": publication_title, "description": subtitle, "itemId": item_id, "date": date, "genre": genre}
-        # these texts should have a differently styled title in toc
-        elif publication_title.find("Lantdagen. ") != -1 or publication_title.find("Valtiopäivät. ") != -1 or publication_title.find("Stadsfullmäktige. ") != -1 or publication_title.find("Kaupunginvaltuusto. ") != -1:
+        # these texts should have a differently styled subtitle, 
+        # found by splitting the main title into two
+        elif publication_title.find("Lantdagen. ") != -1 or publication_title.find("Stadsfullmäktige. ") != -1:   
             publication_title_content = publication_title.split(". ")
             title_one = publication_title_content[0] + "."
             title_two = publication_title_content[1]
             toc_item_dict = {"url": "", "type": "est", "text": title_one, "text_two": title_two, "itemId": item_id, "date": date, "genre": genre}
+        # same as above, but for Finnish titles, so there's a possibility
+        # of the title containing the abbreviation "n." (circa),
+        # which has to be taken into account when splitting
+        elif publication_title.find("Valtiopäivät. ") != -1 or publication_title.find("Kaupunginvaltuusto. ") != -1:
+            if publication_title.find("n. ") != -1:
+                publication_title_content = publication_title.split(". ", 2)
+                title_one = publication_title_content[0] + ". " + publication_title_content[1] + "."
+                title_two = publication_title_content[2]
+                toc_item_dict = {"url": "", "type": "est", "text": title_one, "text_two": title_two, "itemId": item_id, "date": date, "genre": genre}
+            else:    
+                publication_title_content = publication_title.split(". ")
+                title_one = publication_title_content[0] + "."
+                title_two = publication_title_content[1]
+                toc_item_dict = {"url": "", "type": "est", "text": title_one, "text_two": title_two, "itemId": item_id, "date": date, "genre": genre}
         else:
             toc_item_dict = {"url": "", "type": "est", "text": publication_title, "itemId": item_id, "date": date, "genre": genre}
         toc_midlevel_dict["children"].append(toc_item_dict)
