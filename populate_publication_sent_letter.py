@@ -3,19 +3,19 @@
 # publication_manuscript, translation, translation_text, event, event_connection,
 # event_occurrence. It also creates all the needed XML files for each
 # publication and manuscript and updates the db with the file paths.
-#
+
 # The starting point is a csv file containing info about sent letters,
 # which will be made into publications. This file was updated by one of the
 # find_facsimiles-scripts, and this script adds more info to the file:
 # the publication id and title. They will be needed later when populating
 # table facsimile_collection.
-#
+
 # The script also needs the name_dictionary and the name_id_dictionary
 # creted by deal_with_persons.py in order to connect publication with subject
 # (in this case a letter and its recipient). It also uses other dictionaries
 # in order to make genre and language values uniform, and a csv with
 # info about persons.
-#
+
 # Sample input and output (CSV) at end of file.
 
 import psycopg2
@@ -225,14 +225,16 @@ def replace_date(original_date):
 # but hey, this is a humanist project
 def update_sent_publication_with_title(publication_id, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id):
     # if the person's id was in the csv
-    if person_id is not None:
+    # id for "unknown person" is 1912
+    if person_id is not None and person_id != "1912":
         person_legacy_id = None        
         title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part_from_id(person_id)
     # else look for person_legacy_id in dictionary using name as key
     elif unordered_name in name_dictionary.keys():
         person_legacy_id = name_dictionary[unordered_name]
         title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part(persons_list, person_legacy_id, person_id)
-    # if name isn't in dictionary and there's no id, we don't know this person
+    # if name isn't in dictionary and there's no id,
+    # or if id was "unknown person", then we don't know this is
     else:
         person_legacy_id = None
         person = None
@@ -291,13 +293,17 @@ def construct_publication_title_name_part_from_id(person_id):
     person_sv = cursor.fetchone()
     translation_id = person_sv[3]
     if translation_id is not None:
-        fetch_query = """SELECT text FROM translation_text WHERE translation_id = %s AND field_name = %s"""
-        field_name = "full_name"
-        values_to_insert = (translation_id, field_name)
-        cursor.execute(fetch_query, values_to_insert)
-        person_fi = cursor.fetchone()
+        field_names = ["preposition", "last_name", "first_name"]
+        i = 0
+        for field_name in field_names:
+            fetch_query = """SELECT text FROM translation_text WHERE translation_id = %s AND field_name = %s"""
+            values_to_insert = (translation_id, field_names[i])
+            cursor.execute(fetch_query, values_to_insert)
+            field_names[i] = cursor.fetchone()
+            i += 1
+        person_fi = field_names[0] + field_names[1] + field_names[2]
     else:
-        person_fi = (None,)
+        person_fi = (None, None, None)
     person = person_sv + person_fi
     title_name_part_swe = construct_swe_name(person, person_id)
     title_name_part_fin = construct_fin_name(person, person_id, title_name_part_swe)
@@ -310,7 +316,7 @@ def construct_swe_name(person, person_id):
         surname = person[2]
         forename_letter = person[7]
     else:
-        (prefix, surname, forename_letter, translation_id, full_name_fi) = person
+        (prefix, surname, forename_letter, translation_id, prefix_fi, surname_fi, forename_fi) = person
     if forename_letter and prefix and surname:
         title_name_part_swe = forename_letter + " " + prefix + " " + surname
     elif forename_letter and surname:
@@ -338,16 +344,21 @@ def construct_fin_name(person, person_id, title_name_part_swe):
             title_name_part_fin = forename_fi + " " + surname
         elif forename_fi:
             title_name_part_fin = forename_fi
-        # there are no cases with only surname_fi, so no need to check for that
+        elif surname_fi:
+            title_name_part_fin = surname_fi
         # if there are no Finnish name parts, the Swedish version is to be used
         else:
             title_name_part_fin = title_name_part_swe
     else:
-        full_name_fi = person[4]
-        if full_name_fi:
-            title_name_part_fin = full_name_fi
+        (prefix, surname, forename_letter, translation_id, prefix_fi, surname_fi, forename_fi) = person
+        if forename_fi and prefix_fi and surname_fi:
+            title_name_part_fin = forename_fi + " " + prefix_fi + " " + surname_fi
+        elif forename_fi and surname_fi:
+            title_name_part_fin = forename_fi + " " + surname_fi
+        elif forename_fi:
+            title_name_part_fin = forename_fi
         else:
-            title_name_part_fin = title_name_part_swe            
+            title_name_part_fin = surname_fi
     return title_name_part_fin
 
 # populate table translation
@@ -456,7 +467,7 @@ def create_file(directory_path, person, person_id, original_publication_date, or
         # update publication_manuscript too
         update_publication_manuscript_with_file_path(file_path_orig, manuscript_id)
 
-# file and directory names contain a person's name,
+# file and directory names contain a person's (Swedish) name,
 # but not in the same order as in the publication title,
 # and with certain replacements
 def create_name_part_for_file(person, person_id):
@@ -465,7 +476,7 @@ def create_name_part_for_file(person, person_id):
         surname = person[2]
         forename_letter = person[7]
     else:
-        (prefix, surname, forename_letter, translation_id, full_name_fi) = person  
+        (prefix, surname, forename_letter, translation_id, prefix_fi, surname_fi, forename_fi) = person 
     if forename_letter and prefix and surname:
         name_part = prefix + "_" + surname + "_" + forename_letter
     elif forename_letter and surname:
