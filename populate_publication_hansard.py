@@ -1,6 +1,7 @@
 # This script populates table publication,
-# and also two other tables connected to publication:
-# translation and translation_text. It also creates all 
+# and also other tables connected to publication:
+# translation, translation_text, event,
+# event_connection, event_occurrence. It also creates all 
 # the needed XML files for each publication and
 # updates the db with the file paths.
 
@@ -8,7 +9,7 @@
 # which will be made into publications. This script adds more info
 # to the file: the publication id and title. They are needed later
 # when populating table facsimile_collection.
-#
+
 # Sample input and output (CSV) at end of file.
 
 import psycopg2
@@ -58,7 +59,8 @@ def write_list_to_csv(list, filename):
     print("List written to file", filename)
 
 # populate table publication with hansards and create needed content
-# in other tables, i.e. translation, translation_text
+# in other tables, i.e. translation, translation_text, event,
+# event_connection, event_occurrence
 def create_hansard_publication(hansards):
     directory = XML_OUTPUT_FOLDER
     directory_path = create_directory(directory)
@@ -78,6 +80,10 @@ def create_hansard_publication(hansards):
         # title contains the date as it has been recorded originally
         # translated titles are not yet available so we'll use the Swedish title so far
         title_swe, title_fin, translation_id = add_title(publication_id, original_date, date_uncertain, original_title)
+        # these hansards contain texts and speeches by Mechelin 
+        # but also naturally by other members of the Diet
+        # this is registered as a co-authorship: LM & the Diet
+        register_author(publication_id)
         # each publication has two XML-files, a Swedish and a Finnish one
         # these files contain a template and the editors will fill them with content
         # update table translation_text with the file paths
@@ -165,6 +171,37 @@ def create_translation_text(translation_id, text_swe, text_fin, field_name, tabl
     cursor.execute(insert_query, values_to_insert_swe)
     cursor.execute(insert_query, values_to_insert_fin)
 
+def register_author(publication_id):
+    # Mechelin is registered as the co-author of these hansards
+    # together with the subject id for the Diet (as a collective)
+    LM_id = 1
+    diet_subject_id = 7902
+    event_connection_type = "contributed to hansard"
+    event_id = create_event_and_connection(LM_id, diet_subject_id, event_connection_type)
+    event_occurrence_type = "hansard"
+    create_event_occurrence(publication_id, event_id, event_occurrence_type)
+
+# create connection between publication and subject 
+# (the author of the text)
+def create_event_and_connection(LM_id, diet_subject_id, event_connection_type):
+    insert_query = """INSERT INTO event(type) VALUES(%s) RETURNING id"""
+    event_type = "published"
+    value_to_insert = (event_type,)
+    cursor.execute(insert_query, value_to_insert)
+    event_id = cursor.fetchone()[0]
+    insert_query = """INSERT INTO event_connection(subject_id, event_id, type) VALUES(%s, %s, %s)"""
+    values_to_insert_LM = (LM_id, event_id, event_connection_type)
+    values_to_insert_diet = (diet_subject_id, event_id, event_connection_type)
+    cursor.execute(insert_query, values_to_insert_LM)
+    cursor.execute(insert_query, values_to_insert_diet)
+    return event_id
+
+# create connection between publication and event
+def create_event_occurrence(publication_id, event_id, event_occurrence_type):
+    insert_query = """INSERT INTO event_occurrence(type, event_id, publication_id) VALUES(%s, %s, %s)"""
+    values_to_insert = (event_occurrence_type, event_id, publication_id)
+    cursor.execute(insert_query, values_to_insert)
+
 # create a directory
 def create_directory(directory):
     if not os.path.exists(directory):
@@ -231,11 +268,11 @@ def create_title_part_for_file(title_part):
     title_part = title_part.replace("ä", "a")
     # shorten long names of files and directories
     # otherwise the file path may become too long
-    if len(title_part) >= 45:
-        title_part = title_part[0:44]
+    if len(title_part) >= 40:
+        title_part = title_part[0:39]
     return title_part
 
-# the XML files contain a template with the publication's title
+# the XML files contain a template
 def content_template():
     xml_template = '''
     <TEI xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.tei-c.org/ns/1.0" xsi:schemaLocation="">
