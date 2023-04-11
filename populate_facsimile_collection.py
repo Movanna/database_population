@@ -2,25 +2,20 @@
 # and makes the connections to the right publication through
 # table publication_facsimile.
 # It creates the facsimile folder for each facsimile and fills it
-# with the right images, which are renamed, resized and put into
+# with the right images, which are renamed and put into
 # subdirectories.
-#
+
 # The script needs the csv:s which were originally created by the
 # find_facsimiles-scripts and later enriched by the
 # populate_publication-scripts
 # The csv:s contain info about publications and their facsimiles.
-#
-# Functions create_facsimile_folders and copy_images_to_facs_folders
-# borrowed from Niklas Liljestrand (niklil) (who created them for the
-# SLS digital publishing platform).
-#
+
 # Sample input (CSV) at end of file.
 
 import psycopg2
 import re
 import os
 from shutil import copyfile
-from PIL import Image
 
 conn_db = psycopg2.connect(
     host="",
@@ -51,14 +46,21 @@ def create_list_from_csv(filename):
             # get rid of empty value at the end of each list
             # there are two types of csv:s, depending on
             # whether there is an alternative facsimile or not
+            # stop the script if the csv is incorrect
             print(len(elements))
-            if len(elements) == 22:
-                elements.pop(21)
-            # a list of this length means there will be
-            # two separate facsimiles for the publication
-            if len(elements) == 23:
-                elements.pop(22)
-                print("Version coming.")
+            try:
+                if len(elements) == 22:
+                    elements.pop(21)
+                # a list of this length means there will be
+                # two separate facsimiles for the publication
+                elif len(elements) == 23:
+                    elements.pop(22)
+                    print("Version coming.")
+                else:
+                    raise ValueError("CSV is not correct!")
+            except ValueError as e:
+                print(e)
+                raise
             list.append(elements)
         return list
 
@@ -77,6 +79,8 @@ def create_publication_facsimile_collection(facsimiles):
             archive_folder = facsimile[8]
             if old_archive_signum is not None and new_archive_signum is not None and archive_folder is not None and archive_folder != "KA":
                 description = old_archive_signum + ", " + new_archive_signum + ", " + archive_folder
+            elif old_archive_signum is not None and new_archive_signum is not None and archive_folder == "KA":
+                description = old_archive_signum + ", " + new_archive_signum
             elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
                 description = old_archive_signum + ", " + new_archive_signum
             # this is material from another person's archive than Mechelin's,
@@ -100,8 +104,15 @@ def create_publication_facsimile_collection(facsimiles):
             archive_folder = facsimile[8]
             if old_archive_signum is not None and new_archive_signum is not None and archive_folder is not None and archive_folder != "KA":
                 description = old_archive_signum + ", " + new_archive_signum + ", " + archive_folder
+            elif old_archive_signum is not None and new_archive_signum is not None and archive_folder == "KA":
+                description = old_archive_signum + ", " + new_archive_signum
             elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
                 description = old_archive_signum + ", " + new_archive_signum
+            # this is material from another person's archive than Mechelin's,
+            # but still at the National Archive
+            elif old_archive_signum is None and new_archive_signum is not None and archive_folder is not None:
+                description = new_archive_signum + ", " + archive_folder
+            # this is material from another archive than the National Archive
             else:
                 description = archive_folder
             external_url = facsimile[14]
@@ -160,9 +171,6 @@ def create_publication_facsimile_collection(facsimiles):
 
 def create_facsimile_folders(facs_coll_id):
     os.makedirs(os.path.dirname(WEB_FACSIMILE_FOLDER + str(facs_coll_id) + "/1/"), exist_ok=True)
-    os.makedirs(os.path.dirname(WEB_FACSIMILE_FOLDER + str(facs_coll_id) + "/2/"), exist_ok=True)
-    os.makedirs(os.path.dirname(WEB_FACSIMILE_FOLDER + str(facs_coll_id) + "/3/"), exist_ok=True)
-    os.makedirs(os.path.dirname(WEB_FACSIMILE_FOLDER + str(facs_coll_id) + "/4/"), exist_ok=True)
 
 def copy_images_to_facs_folders(file_list, facs_coll_id):
     i = 0
@@ -170,13 +178,6 @@ def copy_images_to_facs_folders(file_list, facs_coll_id):
         file_number = 1 + i
         print(file + ", " + str(file_number))
         copyfile(str(file), WEB_FACSIMILE_FOLDER + str(facs_coll_id) + "/1/" + str(file_number) + ".jpg")
-        image = Image.open(WEB_FACSIMILE_FOLDER + str(facs_coll_id) + "/1/" + str(file_number) + ".jpg")
-        resized_im = image.resize((round(image.size[0]*0.5), round(image.size[1]*0.5)))
-        resized_im.save(WEB_FACSIMILE_FOLDER + str(facs_coll_id) + "/2/" + str(file_number) + ".jpg", quality=90, optimize=True)
-        resized_im = image.resize((round(image.size[0]*0.3), round(image.size[1]*0.3)))
-        resized_im.save(WEB_FACSIMILE_FOLDER + str(facs_coll_id) + "/3/" + str(file_number) + ".jpg", quality=90, optimize=True)
-        resized_im = image.resize((round(image.size[0]*0.1), round(image.size[1]*0.1)))
-        resized_im.save(WEB_FACSIMILE_FOLDER + str(facs_coll_id) + "/4/" + str(file_number) + ".jpg", quality=90, optimize=True)
         i += 1
 
 def create_publication_facsimile(publication_id, facs_coll_id, priority, type):
