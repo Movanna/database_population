@@ -1,9 +1,8 @@
 # This script populates table publication_facsimile_collection
 # and makes the connections to the right publication through
 # table publication_facsimile.
-# It creates the facsimile folder for each facsimile and fills it
-# with the right images, which are renamed and put into
-# subdirectories.
+# It creates the facsimile folder for each facsimile as well as
+# the required subdirectory, which is then filled with the renamed images.
 
 # The script needs the csv:s which were originally created by the
 # find_facsimiles-scripts and later enriched by the
