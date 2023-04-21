@@ -118,6 +118,8 @@ def create_publication_facsimile_collection(facsimiles):
             publication_id = facsimile[20]
             first_image = facsimile[11]
             last_image = facsimile[12]
+            if last_image is None:
+                last_image = first_image
             facsimile_paths_orig = facsimile[18]
             facsimile_paths_version = facsimile[19]
         print(first_image)
