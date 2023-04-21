@@ -105,8 +105,10 @@ def create_misc_publication(COLLECTION_ID, misc_publications, genre_dictionary, 
         archive_folder = publication[8]
         if old_archive_signum is not None and new_archive_signum is not None and archive_folder is not None and archive_folder != "KA":
             archive_signum = old_archive_signum + ", " + new_archive_signum + ", " + archive_folder
-        elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
+        elif old_archive_signum is not None and new_archive_signum is not None and (archive_folder is None or archive_folder == "KA"):
             archive_signum = old_archive_signum + ", " + new_archive_signum
+        elif old_archive_signum is None and new_archive_signum is not None and (archive_folder is not None and archive_folder != "KA"):
+            archive_signum = new_archive_signum + ", " + archive_folder
         else:
             archive_signum = archive_folder
         values_to_insert = (COLLECTION_ID, published, genre, original_publication_date, language_for_db, archive_signum)
@@ -413,14 +415,17 @@ def create_file(directory_path, genre, original_publication_date, original_langu
 # file and directory names contain the text's title
 # with certain replacements
 def create_title_part_for_file(original_title):
-    title_part = original_title.replace(". ", "_")
+    title_part = original_title.replace("[...]", "")
+    title_part = title_part.replace("[…]", "")
+    title_part = title_part.replace("…", "")
+    title_part = title_part.replace(". ", "_")
     title_part = title_part.replace(".", "")
     title_part = title_part.replace(" ", "_")
     title_part = title_part.replace("-", "_")
     title_part = title_part.replace("–", "_")
     title_part = title_part.replace("+", "_")
     title_part = title_part.replace("/", "_")
-    title_part = re.sub(r",|\?|!|’|»|”|:|;|\(|\)|\[|\]|§|\'|\"", "", title_part)
+    title_part = re.sub(r",|\?|!|’|»|”|:|;|\(|\)|\[|\]|§|%|\'|\"", "", title_part)
     title_part = title_part.replace("ç", "c")
     title_part = title_part.replace("Ç", "C")
     title_part = title_part.replace("é", "e")
@@ -436,6 +441,7 @@ def create_title_part_for_file(original_title):
     title_part = title_part.replace("Ü", "U")
     title_part = title_part.replace("ï", "i")
     title_part = title_part.replace("í", "i")
+    title_part = title_part.replace("ñ", "n")
     title_part = title_part.replace("ô", "o")
     title_part = title_part.replace("ó", "o")
     title_part = title_part.replace("ō", "o")
@@ -450,10 +456,15 @@ def create_title_part_for_file(original_title):
     title_part = title_part.replace("å", "a")
     title_part = title_part.replace("Ä", "A")
     title_part = title_part.replace("ä", "a")
+    title_part = title_part.replace("½", "")
     # shorten long names of files and directories
     # otherwise the file path may become too long
-    if len(title_part) >= 40:
-        title_part = title_part[0:39]
+    if len(title_part) >= 35:
+        title_part = title_part[0:34]
+    # if title_part now ends with an underscore:
+    # remove that character
+    if title_part[-1] == "_":
+        title_part = title_part[:-1]
     return title_part
 
 # the XML files contain a template with the publication's title
