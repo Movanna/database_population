@@ -46,12 +46,25 @@ def create_file_list(source_folder):
     return file_list
 
 # iterate through folders recursively and append filepaths to list
-def iterate_through_folders(path, filelist):
+def iterate_through_folders(path, file_list):
     for content in path.iterdir():
         if content.is_dir():
-            iterate_through_folders(content, filelist)
+            iterate_through_folders(content, file_list)
         else:
-            filelist.append(content)
+            file_list.append(content)
+
+# publication_id is present in the file name
+# delete all files where publication_id refers
+# to the test database
+def delete_file_depending_on_filename(file):
+    file_name = file.stem
+    search_string = re.compile(r"_(\d+)$")
+    match = re.search(search_string, file_name)
+    publication_id = match.group(1)
+    publication_id = int(publication_id)
+    if publication_id > 11000:
+        print(file_name)
+        file.unlink()
 
 # rename files and folders if their names contain
 # a certain component
@@ -60,8 +73,8 @@ def rename_file_and_folders(file_list):
         # get all the individual components of the path
         path_parts = list(file.parts)
         # no need to check these first parts of the path
-        new_path = Path(*path_parts[:7])
-        for part in path_parts[7:]:
+        new_path = Path(*path_parts[:8])
+        for part in path_parts[8:]:
             old_path = new_path / part
             if OLD_NAME_COMPONENT in part:
                 new_path = new_path / part.replace(OLD_NAME_COMPONENT, NEW_NAME_COMPONENT)
