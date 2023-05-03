@@ -3,19 +3,19 @@
 # publication_manuscript, translation, translation_text, event, event_connection,
 # event_occurrence. It also creates all the needed XML files for each
 # publication and manuscript and updates the db with the file paths.
-#
+
 # The starting point is a csv file containing info about received letters,
 # which will be made into publications. This file was updated by one of the
 # find_facsimiles-scripts, and this script adds more info to the file:
 # the publication id and title. They will be needed later when populating
 # table facsimile_collection.
-#
+
 # The script also needs the name_dictionary and the name_id_dictionary
 # creted by deal_with_persons.py in order to connect publication with subject
 # (in this case a letter and its writer). It also uses other dictionaries
 # in order to make genre and language values uniform, and a csv with
 # info about persons.
-#
+
 # Sample input and output (CSV) at end of file.
 
 import json
@@ -87,12 +87,24 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
     for letter in received_letters:
         published = 1
         category = letter[1]
+        # in this case (received letters), use this spot for adding the
+        # subject.id of the sender, if this person has been added
+        # to the db recently (normally this is where you
+        # define whether this document is written by LM or not)
         person_id = letter[2]
         # csv is in Finnish, but db has Swedish values for this
         if category in genre_dictionary.keys():
             genre = genre_dictionary[category]
         else:
             genre = category
+        # these are cases of other persons' letters that have
+        # eventually ended up in Mechelin's hands
+        # we'll categorize them as 'received letters', because
+        # LM is the final receiver
+        if genre == "kirje":
+            genre = "mottaget brev"
+        if genre == "sähke":
+            genre = "mottaget telegram"
         original_date = letter[0]
         original_publication_date, no_date, date_uncertain = replace_date(original_date)
         language = letter[7]
@@ -107,11 +119,22 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
         unordered_name = letter[4]
         # register the archive signums, old and new
         # and the archive folder, if present
+        old_archive_signum = letter[13]
+        new_archive_signum = letter[10]
         archive_folder = letter[8]
-        if archive_folder == "KA" or archive_folder is None:
-            archive_signum = letter[13] + ", " + letter[10]
+        if old_archive_signum is not None and new_archive_signum is not None and archive_folder is not None and archive_folder != "KA":
+            archive_signum = old_archive_signum + ", " + new_archive_signum + ", " + archive_folder
+        elif old_archive_signum is not None and new_archive_signum is not None and archive_folder == "KA":
+            archive_signum = old_archive_signum + ", " + new_archive_signum
+        elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
+            archive_signum = old_archive_signum + ", " + new_archive_signum
+        # this is material from another person's archive than Mechelin's,
+        # but still at the National Archive
+        elif old_archive_signum is None and new_archive_signum is not None and archive_folder is not None:
+            archive_signum = new_archive_signum + ", " + archive_folder
+        # this is material from another archive than the National Archive
         else:
-            archive_signum = letter[13] + ", " + letter[10] + ", " + letter[8]
+            archive_signum = archive_folder
         values_to_insert = (COLLECTION_ID, published, genre, original_publication_date, original_language, archive_signum)
         cursor.execute(insert_query, values_to_insert)
         publication_id = cursor.fetchone()[0]
@@ -119,7 +142,7 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
         # the titles are kept in a different table, translation_text
         # titles contain person info
         # titles contain the date (almost) as it has been recorded originally
-        person_legacy_id, person, title_swe, title_fin, translation_id = update_received_publication_with_title(publication_id, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id)
+        person_legacy_id, person, title_swe, title_fin, translation_id, receiver, receiver_legacy_id = update_received_publication_with_title(publication_id, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id)
         # these are received letters/telegrams, i.e. someone else than Mechelin
         # sent them
         # update_publication_with_title found out who the sender was
@@ -128,16 +151,26 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
             event_connection_type = "sent telegram"
         else:
             event_connection_type = "sent letter"
-        event_id = create_event_and_connection(person_legacy_id, person_id, event_connection_type, name_id_dictionary)
-        # the publication is still a received one from Mechelin's point of view
-        # so let's register that as well when creating the event_occurrence
+        # a letter has 1 event, 1-2+ connections and 1 occurrence
+        event_id = create_event()
+        create_event_connection(person_legacy_id, person_id, event_id, event_connection_type, name_id_dictionary)
+        # if there's a receiver who isn't LM:
+        # create another connection, now between publication and receiver
+        if receiver is not None:
+            receiver_id = None
+            if genre == "mottaget telegram":
+                event_connection_type = "received telegram"
+            else:
+                event_connection_type = "received letter"
+            create_event_connection(receiver_legacy_id, receiver_id, event_id, event_connection_type, name_id_dictionary)
+        # the publication is still only a received one from Mechelin's point of view
+        # this is registered as the event_occurrence
         if genre == "mottaget telegram":
             event_occurrence_type = "received telegram"
         else:
             event_occurrence_type = "received letter"
         create_event_occurrence(publication_id, event_id, event_occurrence_type)
-        # since these publications are manuscripts, populate table
-        # publication_manuscript
+        # since these publications are manuscripts, populate table publication_manuscript
         manuscript_type = 1
         manuscript_id = create_publication_manuscript(publication_id, published, manuscript_type, archive_signum, original_language, title_swe)
         # each publication has two XML files, a Swedish and a Finnish one
@@ -215,20 +248,63 @@ def replace_date(original_date):
 # be perfect after this, so some will have to be changed later by hand
 # but hey, this is a humanist project
 def update_received_publication_with_title(publication_id, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id):
-    # if the person's id was in the csv
+    # if this is one of those letters that eventually ended up
+    # in Mechelin's hands but wasn't written directly to him:
+    # the letter's title is "Name_1–Name_2" and we need to extract 
+    # those two names
+    # they are the sender and the receiver
+    # (the usual case for received letters is just one name, the sender)
+    if "–" in unordered_name:
+        names = unordered_name.split("–")
+        unordered_name = names[0]
+        receiver = names[1]
+    # this means that LM is the receiver, but he's not registered
+    # in the db, since this is the default case
+    # the variables below refer to cases with another receiver than LM
+    else:
+        receiver = None
+        receiver_legacy_id = None
+    # if the sender's id was in the csv
     if person_id is not None:
-        person_legacy_id = None        
-        title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part_from_id(person_id)
-    # else look for person_legacy_id in dictionary using name as key
+        # check if this person exists in the db
+        # if not: replace id with id for "unknown person"
+        # thus handling e.g. typos in subject_id:s in the csv
+        # or a test db with different values than the production db
+        fetch_query = """SELECT id FROM subject WHERE id = %s"""
+        value_to_insert = (person_id,)
+        cursor.execute(fetch_query, value_to_insert)
+        subject_exists = cursor.fetchone()
+        if subject_exists is None:
+            print("Person with id " + str(person_id) + " not in db!")
+            person_id = 1912
+            person = None
+            title_name_part_swe = "okänd"
+            title_name_part_fin = "tuntematon"
+        else:
+            title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part_from_id(person_id)
+        person_legacy_id = None
+    # else look for person_legacy_id in dictionary using name as key 
     elif unordered_name in name_dictionary.keys():
         person_legacy_id = name_dictionary[unordered_name]
         title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part(persons_list, person_legacy_id, person_id)
-    # if name isn't in dictionary and there's no id, we don't know this person
+    # if name isn't in dictionary and there's no id, we don't know this sender
     else:
         person_legacy_id = None
         person = None
         title_name_part_swe = "okänd"
         title_name_part_fin = "tuntematon"
+    # now we've got the sender's identity
+    # if this letter has a receiver which is not LM:
+    # get the receiver's identity
+    if receiver is not None:
+        receiver_id = None
+        if receiver in name_dictionary.keys():
+            receiver_legacy_id = name_dictionary[receiver]
+            receiver_name_part_swe, receiver_name_part_fin, receiver_person = construct_publication_title_name_part(persons_list, receiver_legacy_id, receiver_id)
+        else:
+            receiver_legacy_id = None
+            receiver_name_part_swe = "okänd"
+            receiver_name_part_fin = "tuntematon"
     # make some slight changes to original_date, if needed, since it'll be part of a title
     # an original_date written as 1/13.11.1885 means that the document
     # has both an old style (Julian) and a new style (Gregorian) date
@@ -236,9 +312,14 @@ def update_received_publication_with_title(publication_id, unordered_name, perso
     # which is the one on the right side of the slash
     search_string = re.compile(r".*/")
     original_date = search_string.sub("", original_date)
+    # start constructing the titles for this publication
     if no_date is True:
-        title_swe = "odaterat " + title_name_part_swe + "–LM"
-        title_fin = "päiväämätön " + title_name_part_fin + "–LM"
+        if receiver is None:
+            title_swe = "odaterat " + title_name_part_swe + "–LM"
+            title_fin = "päiväämätön " + title_name_part_fin + "–LM"
+        else:
+            title_swe = "odaterat " + title_name_part_swe + "–" + receiver_name_part_swe
+            title_fin = "päiväämätön " + title_name_part_fin + "–" + receiver_name_part_fin
     # if there's some uncertainty about the date, add a standard phrase
     # and leave the ? only if it signifies "month unknown"
     elif date_uncertain is True:
@@ -247,11 +328,19 @@ def update_received_publication_with_title(publication_id, unordered_name, perso
         original_date = search_string.sub(".?.", original_date)
         search_string = re.compile(r"^\.")
         original_date = search_string.sub("", original_date)
-        title_swe = "ca " + original_date + " " + title_name_part_swe + "–LM"
-        title_fin = "n. " + original_date + " " + title_name_part_fin + "–LM"
+        if receiver is None:
+            title_swe = "ca " + original_date + " " + title_name_part_swe + "–LM"
+            title_fin = "n. " + original_date + " " + title_name_part_fin + "–LM"
+        else:
+            title_swe = "ca " + original_date + " " + title_name_part_swe + "–" + receiver_name_part_swe
+            title_fin = "n. " + original_date + " " + title_name_part_fin + "–" + receiver_name_part_fin
     else:
-        title_swe = original_date + " " + title_name_part_swe + "–LM"
-        title_fin = original_date + " " + title_name_part_fin + "–LM"
+        if receiver is None:
+            title_swe = original_date + " " + title_name_part_swe + "–LM"
+            title_fin = original_date + " " + title_name_part_fin + "–LM"
+        else:
+            title_swe = original_date + " " + title_name_part_swe + "–" + receiver_name_part_swe
+            title_fin = original_date + " " + title_name_part_fin + "–" + receiver_name_part_fin
     translation_id = create_translation()
     field_name = "name"
     table_name = "publication"
@@ -259,7 +348,7 @@ def update_received_publication_with_title(publication_id, unordered_name, perso
     update_query = """UPDATE publication SET translation_id = %s WHERE id = %s"""
     values_to_insert = (translation_id, publication_id)
     cursor.execute(update_query, values_to_insert)
-    return person_legacy_id, person, title_swe, title_fin, translation_id
+    return person_legacy_id, person, title_swe, title_fin, translation_id, receiver, receiver_legacy_id
 
 # use person_legacy_id to find out the right person
 def construct_publication_title_name_part(persons_list, person_legacy_id, person_id):
@@ -358,28 +447,44 @@ def create_translation_text(translation_id, text_swe, text_fin, field_name, tabl
     cursor.execute(insert_query, values_to_insert_swe)
     cursor.execute(insert_query, values_to_insert_fin)
 
-# create connection between publication and subject (the recipient of the letter)
-def create_event_and_connection(person_legacy_id, person_id, event_connection_type, name_id_dictionary):
+# create an event to which we then can connect the publication 
+# and the persons involved
+def create_event():
     insert_query = """INSERT INTO event(type) VALUES(%s) RETURNING id"""
     event_type = "published"
     value_to_insert = (event_type,)
     cursor.execute(insert_query, value_to_insert)
     event_id = cursor.fetchone()[0]
+    return event_id
+
+# create the connection between publication and subject 
+# (the sender of the letter, unless there's a receiver who isn't LM)
+def create_event_connection(person_legacy_id, person_id, event_id, event_connection_type, name_id_dictionary):
     insert_query = """INSERT INTO event_connection(subject_id, event_id, type) VALUES(%s, %s, %s)"""
     if person_legacy_id:
         subject_id = name_id_dictionary[person_legacy_id]
         subject_id = int(subject_id)
         values_to_insert = (subject_id, event_id, event_connection_type)
     elif person_id:
-        subject_id = int(person_id)
-        values_to_insert = (subject_id, event_id, event_connection_type)
+        # check if this person exists in the db
+        # if not: replace id with id for "unknown person"
+        # thus handling e.g. typos in subject_id:s in the csv
+        # or a test db with different values than the production db
+        fetch_query = """SELECT id FROM subject WHERE id = %s"""
+        value_to_insert = (person_id,)
+        cursor.execute(fetch_query, value_to_insert)
+        subject_exists = cursor.fetchone()
+        if subject_exists is None:
+            print("Person with id " + str(person_id) + " not in db!")
+            subject_id = 1912
+        else:
+            subject_id = int(person_id)
     else:
-        insert_query = """INSERT INTO event_connection(event_id, type) VALUES(%s, %s)"""
-        values_to_insert = (event_id, event_connection_type)
+        subject_id = 1912
+    values_to_insert = (subject_id, event_id, event_connection_type)
     cursor.execute(insert_query, values_to_insert)
-    return event_id
 
-# create connection between publication and event
+# create the connection between publication and event
 def create_event_occurrence(publication_id, event_id, event_occurrence_type):
     insert_query = """INSERT INTO event_occurrence(type, event_id, publication_id) VALUES(%s, %s, %s)"""
     values_to_insert = (event_occurrence_type, event_id, publication_id)
@@ -407,7 +512,7 @@ def create_directory(directory):
 # publication_manuscript with file paths
 def create_file(directory_path, person, person_id, original_publication_date, original_language, publication_id, translation_id, title_swe, title_fin, manuscript_id):
     # files and directories for letters contain the writer's name 
-    if person:
+    if person is not None:
         name_part = create_name_part_for_file(person, person_id)
     else:
         name_part = "X_X"
