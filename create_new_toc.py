@@ -231,11 +231,11 @@ def create_toc(publication_info_with_content, toc_language, genre_dictionary):
             toc_midlevel_dict = {"text": group_name, "type": "subtitle", "children": []}
             toc_dict["children"].append(toc_midlevel_dict)
         # add the subtitle/publisher
-        if published_by is not None and subtitle_sv is not None:
+        if published_by is not None and subtitle is not None:
             toc_item_dict = {"type": "est", "text": title, "subtitle": subtitle, "description": published_by, "itemId": item_id, "date": date, "genre": genre}
-        elif published_by is not None and subtitle_sv is None:
+        elif published_by is not None and subtitle is None:
             toc_item_dict = {"type": "est", "text": title, "description": published_by, "itemId": item_id, "date": date, "genre": genre}
-        elif published_by is None and subtitle_sv is not None:
+        elif published_by is None and subtitle is not None:
             toc_item_dict = {"type": "est", "text": title, "description": subtitle, "itemId": item_id, "date": date, "genre": genre}
         # these texts should have a differently styled subtitle, 
         # found by splitting the main title into two
