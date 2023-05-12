@@ -80,10 +80,10 @@ def get_publication_info():
         FROM publication
         LEFT JOIN translation_text ON publication.translation_id = translation_text.translation_id
         LEFT JOIN publication_manuscript ON publication.id = publication_manuscript.publication_id
-        WHERE publication_collection_id = %s AND publication.published = %s AND publication.deleted = %s AND translation_text.deleted = %s
+        WHERE publication_collection_id = %s AND publication.published = %s AND publication.deleted = %s AND translation_text.deleted = %s AND (publication_manuscript.deleted = %s OR publication_manuscript.deleted IS NULL)
         GROUP BY publication.id, publication_manuscript.original_filename
-        ORDER BY publication_group_id, original_publication_date"""
-        values_to_insert = (COLLECTION_ID, PUBLISHED[0], DELETED, DELETED)
+        ORDER BY publication_group_id, original_publication_date, publication.id"""
+        values_to_insert = (COLLECTION_ID, PUBLISHED[0], DELETED, DELETED, DELETED)
     # this is toc for the internal site
     else:
         fetch_query = """SELECT publication.id, publication_group_id, publication.published_by, genre, original_publication_date, publication_manuscript.original_filename,
@@ -108,10 +108,10 @@ def get_publication_info():
         FROM publication
         LEFT JOIN translation_text ON publication.translation_id = translation_text.translation_id
         LEFT JOIN publication_manuscript ON publication.id = publication_manuscript.publication_id
-        WHERE publication_collection_id = %s AND (publication.published = %s or publication.published = %s) AND publication.deleted = %s AND translation_text.deleted = %s
+        WHERE publication_collection_id = %s AND (publication.published = %s or publication.published = %s) AND publication.deleted = %s AND translation_text.deleted = %s AND (publication_manuscript.deleted = %s OR publication_manuscript.deleted IS NULL)
         GROUP BY publication.id, publication_manuscript.original_filename
-        ORDER BY publication_group_id, original_publication_date"""        
-        values_to_insert = (COLLECTION_ID, PUBLISHED[0], PUBLISHED[1], DELETED, DELETED)
+        ORDER BY publication_group_id, original_publication_date, publication.id"""        
+        values_to_insert = (COLLECTION_ID, PUBLISHED[0], PUBLISHED[1], DELETED, DELETED, DELETED)
     cursor.execute(fetch_query, values_to_insert)
     publication_info_sorted = cursor.fetchall()
     print(len(publication_info_sorted))
@@ -129,6 +129,12 @@ def get_content(publication_info_sorted):
         filepath_sv = Path(SOURCE_FOLDER + publication[10])
         filepath_fi = Path(SOURCE_FOLDER + publication[11])
         original_filepath = publication[5]
+        # always check sv and fi files
+        # if the manuscript file is the same as the sv or fi file:
+        # the file will have been checked already, don't check it 
+        # again separately
+        if original_filepath == filepath_sv or original_filepath == filepath_fi:
+            original_filepath = None
         if original_filepath is not None:
             original_filepath = Path(SOURCE_FOLDER + publication[5])
         files = [filepath_sv, filepath_fi, original_filepath]
