@@ -216,10 +216,9 @@ def create_toc(publication_info_with_content, toc_language, genre_dictionary):
         # a publication may belong to multiple genres, but the sort
         # options on the site only work with one genre value
         # also, genre in db is in Swedish and needs translation for fi toc
-        if "," in genre_sv or toc_language == "fi":
-            genre = fix_genre(toc_language, genre_sv, genre_dictionary)
-        else:
-            genre = genre_sv
+        # and the genre value should be capitalized since it appears
+        # in the toc as the name of a group level
+        genre = fix_genre(toc_language, genre_sv, genre_dictionary)
         # the first publication or a publication whose group_id
         # is different from previous publication's group_id
         # should generate a group level
@@ -329,21 +328,26 @@ def fix_date(original_date, COLLECTION_ID):
         date = year + "-" + month + "-" + day
     return date
 
+# genre in db is in Swedish and needs translation for fi toc
+# also: use only the first genre value if there are multiple values
+# and capitalize the genre value
 def fix_genre(toc_language, genre_sv, genre_dictionary):
-    # use only the first of the multiple genre values
+    # use only the first of multiple genre values
     if "," in genre_sv:
         genres = genre_sv.split(", ")
-        genre = genres[0]
+        genre = genres[0].capitalize()
         # genre in db is in Swedish, check dictionary for translation
         if toc_language == "fi":
             if genre in genre_dictionary.keys():
-                genre = genre_dictionary[genre]
+                genre = genre_dictionary[genre].capitalize()
     # if toc_language is fi and there's a single genre value
-    else:
+    elif toc_language == "fi":
         if genre_sv in genre_dictionary.keys():
-            genre = genre_dictionary[genre_sv]
+            genre = genre_dictionary[genre_sv].capitalize()
         else:
-            genre = genre_sv
+            genre = genre_sv.capitalize()
+    else:
+        genre = genre_sv.capitalize()
     return genre
 
 # save toc/dictionary as file
@@ -386,7 +390,7 @@ A sample extract from a toc file:
                     "text": "1.1.1873 Torsten & Jenny Costiander–LM",
                     "itemId": "2_3250",
                     "date": "1873-01-01",
-                    "genre": "mottaget brev",
+                    "genre": "Mottaget brev",
                     "facsimileOnly": false
                 },
                 {
@@ -395,7 +399,7 @@ A sample extract from a toc file:
                     "description": "Helsingfors Dagblad 14.7.1873",
                     "itemId": "2_2016",
                     "date": "1873-07-14",
-                    "genre": "artikel",
+                    "genre": "Artikel",
                     "facsimileOnly": false
                 }
             ]
@@ -409,7 +413,7 @@ A sample extract from a toc file:
                     "text": "23.2.1874 Professor i kameral- och politilagfarenhet samt statsrätt",
                     "itemId": "2_4256",
                     "date": "1874-02-23",
-                    "genre": "diplom",
+                    "genre": "Diplom",
                     "facsimileOnly": true
                 }
             ]
