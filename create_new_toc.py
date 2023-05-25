@@ -241,8 +241,8 @@ def create_toc(publication_info_with_content, toc_language, genre_dictionary):
         elif published_by is not None and subtitle is None:
             toc_item_dict = {"type": "est", "text": title, "description": published_by, "itemId": item_id, "date": date, "genre": genre}
         elif published_by is None and subtitle is not None:
-            toc_item_dict = {"type": "est", "text": title, "description": subtitle, "itemId": item_id, "date": date, "genre": genre}
-        # these texts should have a differently styled subtitle, 
+            toc_item_dict = {"type": "est", "text": title, "subtitle": subtitle, "itemId": item_id, "date": date, "genre": genre}
+        # these texts should have a different kind of subtitle, 
         # found by splitting the main title into two
         elif title.find("Lantdagen. ") != -1 or title.find("Stadsfullmäktige. ") != -1:   
             title_content = title.split(". ")
@@ -414,6 +414,15 @@ A sample extract from a toc file:
                     "itemId": "2_4256",
                     "date": "1874-02-23",
                     "genre": "Diplom",
+                    "facsimileOnly": true
+                },
+                {
+                    "type": "est",
+                    "text": "21.2.1876 Finanslära",
+                    "subtitle": "föreläsning 9",
+                    "itemId": "2_1467",
+                    "date": "1876-02-21",
+                    "genre": "Föreläsning",
                     "facsimileOnly": true
                 }
             ]
