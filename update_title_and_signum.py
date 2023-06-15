@@ -21,6 +21,9 @@ DELETED = 0
 # a need to replace the fi titles in translation_text
 # with the sv ones
 LANGUAGE = "sv"
+# Choose whether to update archive signums in table 
+# publication_facsimile_collection or not
+UPDATE_SIGNUM = False
 
 # fetch the correct up-to-date title and archive signum
 # for each publication
@@ -53,16 +56,18 @@ def update_publication_manuscript(publication_id, archive_signum, title):
             value_to_update = (title, publication_id)
             cursor.execute(update_query, value_to_update)
             print("ms " + old_title + " -> " + title)
-        if archive_signum is not None and archive_signum != old_archive_signum:
-            update_query = """UPDATE publication_manuscript SET archive_signum = %s WHERE publication_id = %s"""
-            value_to_update = (archive_signum, publication_id)
-            cursor.execute(update_query, value_to_update)
+        if archive_signum is not None:
+            if archive_signum != old_archive_signum:
+                update_query = """UPDATE publication_manuscript SET archive_signum = %s WHERE publication_id = %s"""
+                value_to_update = (archive_signum, publication_id)
+                cursor.execute(update_query, value_to_update)
 
 # fetch the title and archive signum that are currently in
 # table publication_facsimile_collection
 # check whether they're the same as the ones fetched in
 # fetch_publication_data
-# if not, update the info in this table
+# if not, update the info in this table according to whether
+# to update just titles or both titles and signums
 # make sure not to overwrite titles for versions
 # or facsimile links, because they're never the same
 # as the publication's title; leave these titles out
@@ -70,32 +75,38 @@ def update_publication_manuscript(publication_id, archive_signum, title):
 # also don't update the archive signums of versions, since they
 # may be different from the original publication's signum
 def update_publication_facsimile_collection(publication_facsimile_collection_id, archive_signum, title):
-    facsimile_type = 0 # facsimile links
     priority = 1 # not a version
-    fetch_query = """SELECT title, description FROM publication_facsimile_collection, publication_facsimile WHERE publication_facsimile_collection.id = %s AND NOT type = %s AND priority = %s AND publication_facsimile_collection.id = publication_facsimile.publication_facsimile_collection_id"""
-    values_to_insert = (publication_facsimile_collection_id, facsimile_type, priority)
+    fetch_query = """SELECT title, description, type FROM publication_facsimile_collection, publication_facsimile WHERE publication_facsimile_collection.id = %s AND priority = %s AND publication_facsimile_collection.id = publication_facsimile.publication_facsimile_collection_id"""
+    values_to_insert = (publication_facsimile_collection_id, priority)
     cursor.execute(fetch_query, values_to_insert)
     facsimile_data = cursor.fetchone()
     if facsimile_data is not None:
-        (old_title, old_archive_signum) = facsimile_data
-        if title != old_title:
+        (old_title, old_archive_signum, type) = facsimile_data
+        # type == 0 is a facsimile link
+        if title != old_title and type != 0:
             update_query = """UPDATE publication_facsimile_collection SET title = %s WHERE id = %s"""
             value_to_update = (title, publication_facsimile_collection_id)
             cursor.execute(update_query, value_to_update)
             print("facsimile " + old_title + " -> " + title)
-        # this indicates that the archive signum in this table
-        # has been updated more recently than the one in table
-        # publication, it has been corrected in the wrong place
-        # transfer this info to table publication (by hand) and
-        # don't overwrite it here
-        if archive_signum is not None and len(old_archive_signum) > len(archive_signum):
-            print("facs_coll_id: " + str(publication_facsimile_collection_id) + ", signum: " + old_archive_signum + " should be checked up!")
-            archive_signum = old_archive_signum
-        if archive_signum is not None and archive_signum != old_archive_signum:
+        if archive_signum is not None and old_archive_signum is not None and UPDATE_SIGNUM:
+            # this indicates that the archive signum in this table
+            # has been updated more recently than the one in table
+            # publication, it has been corrected in the wrong place
+            # transfer this info to table publication (by hand) and
+            # don't overwrite it here
+            if len(old_archive_signum) > len(archive_signum):
+                print("facs_coll_id: " + str(publication_facsimile_collection_id) + ", signum: " + old_archive_signum + " should be checked up!")
+                archive_signum = old_archive_signum
+            elif archive_signum != old_archive_signum:
+                update_query = """UPDATE publication_facsimile_collection SET description = %s WHERE id = %s"""
+                value_to_update = (archive_signum, publication_facsimile_collection_id)
+                cursor.execute(update_query, value_to_update)
+                print(old_archive_signum + " -> " + archive_signum)
+        elif archive_signum is not None and old_archive_signum is None and UPDATE_SIGNUM:
             update_query = """UPDATE publication_facsimile_collection SET description = %s WHERE id = %s"""
             value_to_update = (archive_signum, publication_facsimile_collection_id)
             cursor.execute(update_query, value_to_update)
-            print(old_archive_signum + " -> " + archive_signum)
+            print("facsimile " + old_title + " got signum: " + archive_signum)
 
 def main():
     publications = fetch_publication_data()
