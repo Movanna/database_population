@@ -1,5 +1,5 @@
 # database_population
-**Python scripts for populating a PostgreSQL database for a digital edition, for dealing with humanist data and for creating all the infrastructure for the project's workflow, such as XML files and image files.**
+**Python scripts for populating a PostgreSQL database for a digital edition, for dealing with humanist data and for creating all the infrastructure for the project's workflow, such as XML files and image files. Also scripts creating the API endpoints and the tables of contents for the digital edition's website.**
 
 The database belongs to an edition project which publishes the works of the Finnish author and politician **Leo Mechelin** (1839–1914): [the digital archive Leo Mechelin – Pro lege](https://leomechelin.fi). The edition contains tens of thousands of texts, which are published on the website and to some extent also as e-books and in print. The main purpose of the project is to make historical texts and archive material accessible online by digitizing, transcribing and translating documents and by presenting them in a meaningful context.
 
