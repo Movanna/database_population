@@ -1,9 +1,9 @@
 # database_population
-**Python scripts for populating a PostgreSQL database for a digital edition, for dealing with humanist data and for creating all the infrastructure for the project's workflow, such as XML and image files.**
+**Python scripts for populating a PostgreSQL database for a digital edition, for dealing with humanist data and for creating all the infrastructure for the project's workflow, such as XML files and image files.**
 
-The database belongs to an edition project which publishes the works of the Finnish author and politician **Leo Mechelin** (1839–1914). The edition contains tens of thousands of texts, which will be published on a website and to some extent also as e-books and in print. The main purpose of the project is to make historical texts and archive material accessible online by digitizing, transcribing and translating documents and by presenting them in a meaningful context.
+The database belongs to an edition project which publishes the works of the Finnish author and politician **Leo Mechelin** (1839–1914): [the digital archive Leo Mechelin – Pro lege](https://leomechelin.fi). The edition contains tens of thousands of texts, which are published on a website and to some extent also as e-books and in print. The main purpose of the project is to make historical texts and archive material accessible online by digitizing, transcribing and translating documents and by presenting them in a meaningful context.
 
-The PostgreSQL database is part of a **generic digital edition platform**, managed by the Society of Swedish Literature in Finland (see https://github.com/slsfi/digital_edition_documentation/wiki). If you're planning to publish an XML-based online edition, this is an open source project that might be of interest.
+The PostgreSQL database is part of a [Generic Digital Edition Platform](https://github.com/slsfi/digital_edition_documentation/wiki), managed by the Society of Swedish Literature in Finland. If you're planning to publish an XML-based online edition of archive material or historical texts, this is an open source project that might be of interest.
 
 The database contains information about editions (i.e. collections of texts), texts, manuscripts, facsimiles (i.e. images of the original documents), editorial texts and persons related to the texts. Contrary to the earlier projects using the same digital edition platform (and thus database), this project is bilingual (Swedish/Finnish), so some changes were made to the original database schema in order to accommodate translations. The current schema is in digital_edition_database_schema.sql.
 
@@ -13,7 +13,7 @@ The database contains information about editions (i.e. collections of texts), te
 
 I thus **planned the entire digital workflow for the project**, because the digital publishing platform holds no solution whatsoever for that, it just provides the general backend and frontend including the database structure.
 
-For the next step in the process of publishing these texts using the digital edition platform, see my repo transform_texts.
+For the last step in the process of publishing these texts using the Generic Digital Edition Platform, see my repo [transform_texts](https://github.com/Movanna/transform_texts).
 
 ## 1. Populate table subject
 Table subject holds information about persons.
@@ -95,11 +95,21 @@ Later on, I had the need to rename lots of files and folders, because it turned 
 ### 5. h) update_archive_links.py
 This script updates url values connected to facsimiles (i.e. images units) in table publication_facsimile_collection. The National Archives updated their online digital archive services, which caused thousands of links from this project to their service to go dead. This script fixes missing links and swaps the old ones into their new equivalents. The links are then displayed in the digital edition's metadata column as the archive source for the images.
 
-## 6. Create a table of contents for each part of the edition
-After a table of contents has been added to the website the digital edition is actually usable: it now has texts, manuscripts, facsimiles, metadata and a way of navigating between texts. The toc files are not edited by hand, just generated again if there has been changes to the db (such as publications added or deleted or changed titles/dates/groups).
+## 6. Create the API endpoints
+A Flask app is used to build the website's API.
 
-### 6. a) create_toc.py
+### 6. a) api_endpoints.py
+This script creates the endpoints for the API. The live API endpoints can be found at https://leomechelin.fi  + what's stated in the corresponding @app.route() decorator, where <project> is leomechelin. Examples:
+[metadata endpoint](https://leomechelin.fi/api/leomechelin/publications/100/metadata/sv), [endpoint for downloadable txt file](https://leomechelin.fi/api/leomechelin/text/downloadable/txt/1/100/est/sv), [manuscript endpoint](https://leomechelin.fi/api/leomechelin/text/1/100/ms).
+
+### 6. b) endpoint_queries.py
+This script handles the database queries for the API endpoints.
+
+## 7. Create a table of contents for each part of the edition
+After a table of contents has been added to the [website](https://leomechelin.fi) the digital edition is actually usable: it now has texts, manuscripts, facsimiles, metadata and a way of navigating between texts. The toc files are not edited by hand, just generated again if there has been changes to the db (such as publications added or deleted or changed titles/dates/groups).
+
+### 7. a) create_toc.py
 This script generates a table of contents JSON file out of data in the db. The toc contains all publications belonging to a collection, sorted according to group and then chronologically. If there's a subtitle or some explanatory description of the text, it is added too. The script creates both a Swedish and a Finnish toc, since the web site is bilingual. 
 
-### 6. a) create_new_toc.py
+### 7. b) create_new_toc.py
 This script replaces the previous one since the new website has more features. The script still generates a table of contents JSON file, which is the side menu of the site. There is a Swedish and a Finnish toc, and they contain all publications belonging to a collection sorted as follows: firstly according to the publications' group id and then chronologically within the group. The toc displays the publication's title and possible descriptions, and on the website it can be sorted according to genre and date. The script fetches publication data from the db and also checks all the files belonging to each publication in order to determine whether this publication has text content or not. In this project, a publication consists either of images and metadata, or of text, metadata and (usually) images. The two cases are styled differently in the side menu depending on their content value.
