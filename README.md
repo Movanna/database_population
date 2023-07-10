@@ -93,7 +93,7 @@ When running any of the scripts that populate table publication, the XML files f
 Later on, I had the need to rename lots of files and folders, because it turned out that some senders and receivers of letters had been registered wrong: their names were actually something else. The name of the sender or receiver is included in the file and folder names, and a person may have hundreds of folders and files. So I modified this script into also renaming files and folders if a certain component was present in them.
 
 ### 5. h) update_archive_links.py
-This script updates url values connected to facsimiles (i.e. images units) in table publication_facsimile_collection. The National Archives updated their online digital archive services, which caused thousands of links from this project to their service to go dead. This script fixes missing links and swaps the old ones into their new equivalents. The links are then displayed in the digital edition's metadata column as the archive source for the images.
+This script updates URL values connected to facsimiles (i.e. images units) in table publication_facsimile_collection. The National Archives updated their online digital archive services, which caused thousands of links from this project to their service to go dead. This script fixes missing URL:s and swaps the old ones into their new equivalents. The links are then displayed in the digital edition's metadata column as the archive source for the images.
 
 ## 6. Create the API endpoints
 A Flask app is used to build the website's API.
