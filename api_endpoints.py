@@ -59,7 +59,12 @@ def get_published_collections(project):
 @cross_origin()
 def get_ms(project, collection_id, publication_id):
     published_collections = get_published_collections(project)
-    if published_collections != [] and int(collection_id) in published_collections:
+    publication_published_status = queries.get_publication_published_status(collection_id, publication_id)
+    # if status is None, then the given combo of collection id 
+    # and publication id doesn't exist
+    if publication_published_status is None:
+        abort(404)
+    if published_collections != [] and int(collection_id) in published_collections and (publication_published_status == 1 or publication_published_status == 2):
         ms_data = queries.get_ms_data(publication_id)
         # if the publication simply doesn't have a ms
         # and only consists of the read text
@@ -117,7 +122,12 @@ def get_ms(project, collection_id, publication_id):
 @cross_origin()
 def get_downloadable_text(project, format, collection_id, publication_id, language):
     published_collections = get_published_collections(project)
-    if published_collections != [] and int(collection_id) in published_collections:
+    publication_published_status = queries.get_publication_published_status(collection_id, publication_id)
+    # if status is None, then the given combo of collection id 
+    # and publication id doesn't exist
+    if publication_published_status is None:
+        abort(404)
+    if published_collections != [] and int(collection_id) in published_collections and (publication_published_status == 1 or publication_published_status == 2):
         file_path = queries.get_est_file_path(publication_id, language)
         if file_path is None:
             data = {
@@ -273,7 +283,12 @@ def get_downloadable_text(project, format, collection_id, publication_id, langua
 @cross_origin()
 def get_est(project, collection_id, publication_id, language):
     published_collections = get_published_collections(project)
-    if published_collections != [] and int(collection_id) in published_collections:
+    publication_published_status = queries.get_publication_published_status(collection_id, publication_id)
+    # if status is None, then the given combo of collection id 
+    # and publication id doesn't exist
+    if publication_published_status is None:
+        abort(404)
+    if published_collections != [] and int(collection_id) in published_collections and (publication_published_status == 1 or publication_published_status == 2):
         file_path = queries.get_est_file_path(publication_id, language)
         if file_path is None:
             data = {
@@ -676,7 +691,12 @@ def get_persons(project, language):
 @cross_origin()
 def get_introduction(project, collection_id, publication_id, language):
     published_collections = get_published_collections(project)
-    if published_collections != [] and int(collection_id) in published_collections:
+    publication_published_status = queries.get_publication_published_status(collection_id, publication_id)
+    # if status is None, then the given combo of collection id 
+    # and publication id doesn't exist
+    if publication_published_status is None:
+        abort(404)
+    if published_collections != [] and int(collection_id) in published_collections and (publication_published_status == 1 or publication_published_status == 2):
         file_path = queries.get_intro_file_path(collection_id, language)
         content = transform(file_path, language)
         data = {
@@ -699,7 +719,12 @@ def get_introduction(project, collection_id, publication_id, language):
 @cross_origin()
 def get_title(project, collection_id, publication_id, language):
     published_collections = get_published_collections(project)
-    if published_collections != [] and int(collection_id) in published_collections:
+    publication_published_status = queries.get_publication_published_status(collection_id, publication_id)
+    # if status is None, then the given combo of collection id 
+    # and publication id doesn't exist
+    if publication_published_status is None:
+        abort(404)
+    if published_collections != [] and int(collection_id) in published_collections and (publication_published_status == 1 or publication_published_status == 2):
         file_path = queries.get_title_file_path(collection_id, language)
         content = transform(file_path, language)
         data = {

@@ -31,6 +31,17 @@ def get_collection_published_status(project):
     connection.close()
     return result
 
+# make sure the given combo of collection id and
+# publication id exists, and check the publication's
+# published status
+def get_publication_published_status(collection_id, publication_id):
+    connection = db_engine.connect()
+    select = "SELECT published FROM publication WHERE publication_collection_id = :pub_coll_id AND id = :pub_id;"
+    statement = text(select).bindparams(pub_coll_id=collection_id, pub_id=publication_id)
+    result = connection.execute(statement).fetchone()
+    connection.close()
+    return result["published"]
+
 # get the file path for the established text/reading text
 def get_est_file_path(publication_id, language):
     connection = db_engine.connect()
