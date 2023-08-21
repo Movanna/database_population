@@ -690,13 +690,10 @@ def get_persons(project, language):
 @app.route("/api/<project>/text/<collection_id>/<publication_id>/inl/<language>")
 @cross_origin()
 def get_introduction(project, collection_id, publication_id, language):
+    # checking the published status for the collection is enough
+    # since publication id is irrelevant in the case of introductions
     published_collections = get_published_collections(project)
-    publication_published_status = queries.get_publication_published_status(collection_id, publication_id)
-    # if status is None, then the given combo of collection id 
-    # and publication id doesn't exist
-    if publication_published_status is None:
-        abort(404)
-    if published_collections != [] and int(collection_id) in published_collections and (publication_published_status == 1 or publication_published_status == 2):
+    if published_collections != [] and int(collection_id) in published_collections:
         file_path = queries.get_intro_file_path(collection_id, language)
         content = transform(file_path, language)
         data = {

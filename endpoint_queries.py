@@ -40,7 +40,10 @@ def get_publication_published_status(collection_id, publication_id):
     statement = text(select).bindparams(pub_coll_id=collection_id, pub_id=publication_id)
     result = connection.execute(statement).fetchone()
     connection.close()
-    return result["published"]
+    if result is None:
+        return None
+    else:
+        return result["published"]
 
 # get the file path for the established text/reading text
 def get_est_file_path(publication_id, language):
@@ -49,7 +52,10 @@ def get_est_file_path(publication_id, language):
     statement = text(select).bindparams(p_id=publication_id, lang=language)
     result = connection.execute(statement).fetchone()
     connection.close()
-    return result["file"]
+    if result is None:
+        return None
+    else:
+        return result["file"]
 
 # get manuscript data
 def get_ms_data(publication_id):
@@ -106,7 +112,10 @@ def get_intro_file_path(collection_id, language):
     statement = text(select).bindparams(c_id=collection_id)
     result = connection.execute(statement).fetchone()
     connection.close()
-    return result["file"]
+    if result is None:
+        return None
+    else:
+        return result["file"]
 
 # get the file path for the title page
 def get_title_file_path(collection_id, language):
@@ -118,7 +127,10 @@ def get_title_file_path(collection_id, language):
     statement = text(select).bindparams(c_id=collection_id)
     result = connection.execute(statement).fetchone()
     connection.close()
-    return result["file"]
+    if result is None:
+        return None
+    else:
+        return result["file"]
 
 # get metadata for the publication
 def get_publication_metadata(publication_id, language, published_collections):
