@@ -42,10 +42,7 @@ cursor = conn_db.cursor()
 COLLECTION_ID = 1
 # this value is either 0 (unpublished), 1 (internally published)
 # or 2 (internally & externally published)
-# we want to make tocs either for the internal site (values 1, 2)
-# or for the external site (value 2)
-# therefore PUBLISHED is always a list, containing either one
-# or two values
+# therefore PUBLISHED is always a list
 PUBLISHED = [1, 2]
 DELETED = 0
 TRANSLATION_TEXT_LANGUAGE = ["sv", "fi"]
@@ -56,62 +53,32 @@ def get_publication_info():
     # the query initially returns 4-6 tuples per publication id:
     # merge these into 1 single tuple using GROUP BY and MAX
     # then order the tuples by publication group and date
-    # one PUBLISHED value is the toc for the external site
-    if len(PUBLISHED) == 1:
-        fetch_query = """SELECT publication.id, publication_group_id, publication.published_by, genre, original_publication_date, publication_manuscript.original_filename,
-        MAX(CASE
-            WHEN translation_text.language = 'sv' AND translation_text.field_name = 'name' THEN translation_text.text
-        END) AS "title_sv",
-        MAX(CASE
-            WHEN translation_text.language = 'fi' AND translation_text.field_name = 'name' THEN translation_text.text
-        END) AS "title_fi",
-        MAX(CASE
-            WHEN translation_text.language = 'sv' AND translation_text.field_name = 'subtitle' THEN translation_text.text
-        END) AS "subtitle_sv",
-        MAX(CASE
-            WHEN translation_text.language = 'fi' AND translation_text.field_name = 'subtitle' THEN translation_text.text
-        END) AS "subtitle_fi",
-        MAX(CASE
-            WHEN translation_text.language = 'sv' AND translation_text.field_name = 'original_filename' THEN translation_text.text
-        END) AS "filename_sv",
-        MAX(CASE
-            WHEN translation_text.language = 'fi' AND translation_text.field_name = 'original_filename' THEN translation_text.text
-        END) AS "filename_fi"
-        FROM publication
-        LEFT JOIN translation_text ON publication.translation_id = translation_text.translation_id
-        LEFT JOIN publication_manuscript ON publication.id = publication_manuscript.publication_id
-        WHERE publication_collection_id = %s AND publication.published = %s AND publication.deleted = %s AND translation_text.deleted = %s AND (publication_manuscript.deleted = %s OR publication_manuscript.deleted IS NULL)
-        GROUP BY publication.id, publication_manuscript.original_filename
-        ORDER BY publication_group_id, original_publication_date, publication.id"""
-        values_to_insert = (COLLECTION_ID, PUBLISHED[0], DELETED, DELETED, DELETED)
-    # this is toc for the internal site
-    else:
-        fetch_query = """SELECT publication.id, publication_group_id, publication.published_by, genre, original_publication_date, publication_manuscript.original_filename,
-        MAX(CASE
-            WHEN translation_text.language = 'sv' AND translation_text.field_name = 'name' THEN translation_text.text
-        END) AS "title_sv",
-        MAX(CASE
-            WHEN translation_text.language = 'fi' AND translation_text.field_name = 'name' THEN translation_text.text
-        END) AS "title_fi",
-        MAX(CASE
-            WHEN translation_text.language = 'sv' AND translation_text.field_name = 'subtitle' THEN translation_text.text
-        END) AS "subtitle_sv",
-        MAX(CASE
-            WHEN translation_text.language = 'fi' AND translation_text.field_name = 'subtitle' THEN translation_text.text
-        END) AS "subtitle_fi",
-        MAX(CASE
-            WHEN translation_text.language = 'sv' AND translation_text.field_name = 'original_filename' THEN translation_text.text
-        END) AS "filename_sv",
-        MAX(CASE
-            WHEN translation_text.language = 'fi' AND translation_text.field_name = 'original_filename' THEN translation_text.text
-        END) AS "filename_fi"
-        FROM publication
-        LEFT JOIN translation_text ON publication.translation_id = translation_text.translation_id
-        LEFT JOIN publication_manuscript ON publication.id = publication_manuscript.publication_id
-        WHERE publication_collection_id = %s AND (publication.published = %s or publication.published = %s) AND publication.deleted = %s AND translation_text.deleted = %s AND (publication_manuscript.deleted = %s OR publication_manuscript.deleted IS NULL)
-        GROUP BY publication.id, publication_manuscript.original_filename
-        ORDER BY publication_group_id, original_publication_date, publication.id"""        
-        values_to_insert = (COLLECTION_ID, PUBLISHED[0], PUBLISHED[1], DELETED, DELETED, DELETED)
+    fetch_query = """SELECT publication.id, publication_group_id, publication.published_by, genre, original_publication_date, publication_manuscript.deleted, publication_manuscript.original_filename,
+    MAX(CASE
+        WHEN translation_text.language = 'sv' AND translation_text.field_name = 'name' THEN translation_text.text
+    END) AS "title_sv",
+    MAX(CASE
+        WHEN translation_text.language = 'fi' AND translation_text.field_name = 'name' THEN translation_text.text
+    END) AS "title_fi",
+    MAX(CASE
+        WHEN translation_text.language = 'sv' AND translation_text.field_name = 'subtitle' THEN translation_text.text
+    END) AS "subtitle_sv",
+    MAX(CASE
+        WHEN translation_text.language = 'fi' AND translation_text.field_name = 'subtitle' THEN translation_text.text
+    END) AS "subtitle_fi",
+    MAX(CASE
+        WHEN translation_text.language = 'sv' AND translation_text.field_name = 'original_filename' THEN translation_text.text
+    END) AS "filename_sv",
+    MAX(CASE
+        WHEN translation_text.language = 'fi' AND translation_text.field_name = 'original_filename' THEN translation_text.text
+    END) AS "filename_fi"
+    FROM publication
+    LEFT JOIN translation_text ON publication.translation_id = translation_text.translation_id
+    LEFT JOIN publication_manuscript ON publication.id = publication_manuscript.publication_id
+    WHERE publication_collection_id = %s AND publication.published = %s AND publication.deleted = %s AND translation_text.deleted = %s AND (publication_manuscript.deleted = %s OR publication_manuscript.deleted = %s OR publication_manuscript.deleted IS NULL)
+    GROUP BY publication.id, publication_manuscript.deleted, publication_manuscript.original_filename
+    ORDER BY publication_group_id, original_publication_date, publication.id"""
+    values_to_insert = (COLLECTION_ID, PUBLISHED[0], DELETED, DELETED, DELETED, 1)
     cursor.execute(fetch_query, values_to_insert)
     publication_info_sorted = cursor.fetchall()
     print(len(publication_info_sorted))
@@ -126,17 +93,21 @@ def get_publication_info():
 def get_content(publication_info_sorted):
     publication_info_with_content = []
     for publication in publication_info_sorted:
-        filepath_sv = Path(SOURCE_FOLDER + publication[10])
-        filepath_fi = Path(SOURCE_FOLDER + publication[11])
-        original_filepath = publication[5]
+        filepath_sv = Path(SOURCE_FOLDER + publication[11])
+        filepath_fi = Path(SOURCE_FOLDER + publication[12])
+        original_filepath = publication[6]
         # always check sv and fi files
         # if the manuscript file is the same as the sv or fi file:
         # the file will have been checked already, don't check it 
         # again separately
+        # if the manuscript is set as deleted, don't check that file
         if original_filepath == filepath_sv or original_filepath == filepath_fi:
             original_filepath = None
+        # if ms has been deleted
+        if publication[5] == 1:
+            original_filepath = None
         if original_filepath is not None:
-            original_filepath = Path(SOURCE_FOLDER + publication[5])
+            original_filepath = Path(SOURCE_FOLDER + publication[6])
         files = [filepath_sv, filepath_fi, original_filepath]
         content = check_xml_content(files)
         content = tuple((content,))
@@ -194,11 +165,11 @@ def create_toc(publication_info_with_content, toc_language, genre_dictionary):
         published_by = publication[2]
         genre_sv = publication[3]
         original_date = publication[4]
-        title_sv = publication[6]
-        title_fi = publication[7]
-        subtitle_sv = publication[8]
-        subtitle_fi = publication[9]
-        content = publication[12]
+        title_sv = publication[7]
+        title_fi = publication[8]
+        subtitle_sv = publication[9]
+        subtitle_fi = publication[10]
+        content = publication[13]
         if toc_language == "sv":
             title = title_sv
             subtitle = subtitle_sv
