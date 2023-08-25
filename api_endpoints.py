@@ -9,6 +9,7 @@
 # https://leomechelin.fi/api/leomechelin/publications/97/metadata/sv
 # https://leomechelin.fi/api/leomechelin/text/downloadable/txt/1/100/est/sv
 # https://leomechelin.fi/api/leomechelin/text/1/100/ms
+# https://leomechelin.fi/api/leomechelin/subject/1/sv
 
 from flask import Flask, jsonify, safe_join, abort, request
 from flask_cors import CORS, cross_origin
@@ -564,11 +565,17 @@ def handle_archive_info(archive_info, language):
     return archive_info
 
 # endpoint for person info (shown as tooltip/pop-up in the texts)
-@app.route("/api/<project>/subject/<subject_id>")
+@app.route("/api/<project>/subject/<subject_id>/<language>")
 @cross_origin()
-def get_subject(project, subject_id):
-    subject_data = queries.get_subject_data(project, subject_id)
-    response = jsonify({**dict(subject_data)})
+def get_subject(project, subject_id, language):
+    subject_data = queries.get_subject_data(project, subject_id, language)
+    if subject_data is None:
+        result = {}
+    else:
+        result = []
+        data_result = contruct_person_data(subject_data, language, result)
+        result = dict(data_result[0])
+    response = jsonify(result)
     return response, 200
 
 # endpoint for the index of persons
@@ -579,112 +586,110 @@ def get_persons(project, language):
     result = []
     for person in persons:
         try:
-            id = person[0]
-            first_name = person[1]
-            last_name = person[2]
-            preposition = person[3]
-            full_name = person[4]
-            description = person[5]
-            date_born = person[6]
-            date_deceased = person[7]
-            alias = person[8]
-            previous_last_name = person[9]
-            data = {}
-            data["id"] = id
-            data["first_name"] = first_name
-            data["last_name"] = last_name
-            data["preposition"] = preposition
-            data["full_name"] = full_name
-            data["description"] = description
-            data["date_born"] = date_born
-            data["date_deceased"] = date_deceased
-            if alias is not None:
-                data["alias"] = "även kallad " + alias
-            else:
-                data["alias"] = alias
-            data["previous_last_name"] = previous_last_name
-            # name_for_list is the name that is initially shown in the index,
-            # the name parts are combined differently for the sv and fi indexes
-            if language == "sv":
-                if preposition is not None and last_name is not None and first_name is not None:
-                    data["name_for_list"] = preposition + " " + last_name + ", " + first_name
-                elif preposition is None and last_name is not None and first_name is not None:
-                    data["name_for_list"] = last_name + ", " + first_name
-                elif preposition is not None and last_name is not None and first_name is None:
-                    data["name_for_list"] = preposition + " " + last_name
-                elif preposition is None and last_name is not None and first_name is None:
-                    data["name_for_list"] = last_name
-                else:
-                    data["name_for_list"] = first_name
-            if language == "fi":
-                if preposition is not None and last_name is not None and first_name is not None:
-                    data["name_for_list"] = last_name + ", " + first_name + " " + preposition 
-                elif preposition is None and last_name is not None and first_name is not None:
-                    data["name_for_list"] = last_name + ", " + first_name
-                elif preposition is not None and last_name is not None and first_name is None:
-                    data["name_for_list"] = last_name + ", " + preposition
-                elif preposition is None and last_name is not None and first_name is None:
-                    data["name_for_list"] = last_name
-                else:
-                    data["name_for_list"] = first_name
-            # the name used for sorting is constructed here
-            if last_name is not None and first_name is not None:
-                data["sort_by"] = last_name + " " + first_name
-            elif last_name is not None and first_name is None:
-                data["sort_by"] = last_name
-            else:
-                data["sort_by"] = first_name
-            dates = [date_born, date_deceased]
-            i = 0
-            # replace inital 0 and some of the X in the dates
-            for date in dates:
-                if date is not None and date != "XXXX-XX-XX":
-                    split_date = date.split("-")
-                    year = split_date[0]
-                    month = split_date[1] if len(split_date) > 1 else "XX"
-                    day = split_date[2] if len(split_date) > 2 else "XX"
-                    if month.startswith("0"):
-                        month = month.replace("0", "", 1)
-                    if day.startswith("0"):
-                        day = day.replace("0", "", 1)
-                    if i == 0:
-                        lived_between_start = day + "." + month + "." + year
-                    else:
-                        lived_between_end = day + "." + month + "." + year                    
-                else:
-                    if i == 0:
-                        lived_between_start = ""
-                    else:
-                        lived_between_end = ""
-                i += 1
-            if lived_between_start != "" and lived_between_end != "":
-                lived_between = lived_between_start + "–" + lived_between_end
-                lived_between = lived_between.replace("XX.XX.", "")
-            elif lived_between_start != "" and lived_between_end == "":
-                # just show "born"
-                if language == "sv":
-                    lived_between = "f. " + lived_between_start
-                if language == "fi":
-                    lived_between = "s. " + lived_between_start
-                lived_between = lived_between.replace("XX.XX.", "")
-            elif lived_between_start == "" and lived_between_end != "":
-                # just show "died"
-                if language == "sv":
-                    lived_between = "d. " + lived_between_end
-                if language == "fi":
-                    lived_between = "k. " + lived_between_end
-                lived_between = lived_between.replace("XX.XX.", "")
-            else:
-                lived_between = None
-            data["lived_between"] = lived_between
-            result.append(data)
+            result = contruct_person_data(person, language, result)
         except:
             continue
     # the endpoint provides the whole person index at once
-    # already sorted
+    # already sorted alphabetically
     result.sort(key=lambda x: x["sort_by"])
     response = jsonify(result)
     return response, 200
+
+def contruct_person_data(person, language, result):
+    id = person[0]
+    first_name = person[1]
+    last_name = person[2]
+    preposition = person[3]
+    full_name = person[4]
+    description = person[5]
+    date_born = person[6]
+    date_deceased = person[7]
+    alias = person[8]
+    previous_last_name = person[9]
+    data = {}
+    data["id"] = id
+    data["first_name"] = first_name
+    data["last_name"] = last_name
+    data["preposition"] = preposition
+    data["full_name"] = full_name
+    data["description"] = description
+    data["date_born"] = date_born
+    data["date_deceased"] = date_deceased
+    if alias is not None:
+        data["alias"] = "även kallad " + alias
+    else:
+        data["alias"] = alias
+    data["previous_last_name"] = previous_last_name
+    if language == "sv":
+        if preposition is not None and last_name is not None and first_name is not None:
+            data["name_for_list"] = preposition + " " + last_name + ", " + first_name
+        elif preposition is None and last_name is not None and first_name is not None:
+            data["name_for_list"] = last_name + ", " + first_name
+        elif preposition is not None and last_name is not None and first_name is None:
+            data["name_for_list"] = preposition + " " + last_name
+        elif preposition is None and last_name is not None and first_name is None:
+            data["name_for_list"] = last_name
+        else:
+            data["name_for_list"] = first_name
+    if language == "fi":
+        if preposition is not None and last_name is not None and first_name is not None:
+            data["name_for_list"] = last_name + ", " + first_name + " " + preposition 
+        elif preposition is None and last_name is not None and first_name is not None:
+            data["name_for_list"] = last_name + ", " + first_name
+        elif preposition is not None and last_name is not None and first_name is None:
+            data["name_for_list"] = last_name + ", " + preposition
+        elif preposition is None and last_name is not None and first_name is None:
+            data["name_for_list"] = last_name
+        else:
+            data["name_for_list"] = first_name
+    if last_name is not None and first_name is not None:
+        data["sort_by"] = last_name + " " + first_name
+    elif last_name is not None and first_name is None:
+        data["sort_by"] = last_name
+    else:
+        data["sort_by"] = first_name
+    dates = [date_born, date_deceased]
+    i = 0
+    for date in dates:
+        if date is not None and date != "XXXX-XX-XX":
+            split_date = date.split("-")
+            year = split_date[0]
+            month = split_date[1] if len(split_date) > 1 else "XX"
+            day = split_date[2] if len(split_date) > 2 else "XX"
+            if month.startswith("0"):
+                month = month.replace("0", "", 1)
+            if day.startswith("0"):
+                day = day.replace("0", "", 1)
+            if i == 0:
+                lived_between_start = day + "." + month + "." + year
+            else:
+                lived_between_end = day + "." + month + "." + year                    
+        else:
+            if i == 0:
+                lived_between_start = ""
+            else:
+                lived_between_end = ""
+        i += 1
+    if lived_between_start != "" and lived_between_end != "":
+        lived_between = lived_between_start + "–" + lived_between_end
+        lived_between = lived_between.replace("XX.XX.", "")
+    elif lived_between_start != "" and lived_between_end == "":
+        if language == "sv":
+            lived_between = "f. " + lived_between_start
+        if language == "fi":
+            lived_between = "s. " + lived_between_start
+        lived_between = lived_between.replace("XX.XX.", "")
+    elif lived_between_start == "" and lived_between_end != "":
+        if language == "sv":
+            lived_between = "d. " + lived_between_end
+        if language == "fi":
+            lived_between = "k. " + lived_between_end
+        lived_between = lived_between.replace("XX.XX.", "")
+    else:
+        lived_between = None
+    data["lived_between"] = lived_between
+    result.append(data)
+    return result
 
 # endpoint for the introduction text
 @app.route("/api/<project>/text/<collection_id>/<publication_id>/inl/<language>")

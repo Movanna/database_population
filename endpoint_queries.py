@@ -318,11 +318,35 @@ def get_alternative_facsimiles(publication_id):
     return result
 
 # get person data for a single person
-def get_subject_data(project, subject_id):
+def get_subject_data(project, subject_id, language):
     if project == "leomechelin":
         project_id = 1
     connection = db_engine.connect()
-    select = "SELECT id, first_name, last_name, preposition, full_name, description, date_born, date_deceased FROM subject WHERE project_id = :p_id AND id = :s_id AND deleted = 0;"
+    if language == "sv":
+        select = "SELECT id, first_name, last_name, preposition, full_name, description, date_born, date_deceased, alias, previous_last_name FROM subject WHERE project_id = :p_id AND id = :s_id AND deleted = 0;"
+    if language == "fi":
+        select = """SELECT subject.id,
+            MAX(CASE
+                WHEN subject.translation_id IS NULL THEN first_name
+                WHEN subject.translation_id IS NOT NULL AND field_name = 'first_name' THEN tt.text
+            END) AS first_name,
+            MAX(CASE
+                WHEN subject.translation_id IS NULL THEN last_name
+                WHEN subject.translation_id IS NOT NULL AND field_name = 'last_name' THEN tt.text
+            END) AS last_name,
+            MAX(CASE
+                WHEN subject.translation_id IS NULL THEN preposition
+                WHEN subject.translation_id IS NOT NULL AND field_name = 'preposition' THEN tt.text
+            END) AS preposition,
+            MAX(CASE
+                WHEN subject.translation_id IS NULL THEN full_name
+                WHEN subject.translation_id IS NOT NULL AND field_name = 'full_name' THEN tt.text
+            END) AS full_name,
+                description, date_born, date_deceased, alias, previous_last_name
+            FROM subject
+            LEFT JOIN
+                translation_text AS tt ON subject.translation_id = tt.translation_id AND tt.deleted = 0
+            WHERE project_id = :p_id AND subject.id = :s_id AND subject.deleted = 0 GROUP BY subject.id;"""
     statement = text(select).bindparams(p_id=project_id, s_id=subject_id)
     result = connection.execute(statement).fetchone()
     connection.close()
