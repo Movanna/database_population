@@ -552,7 +552,7 @@ def handle_archive_info(archive_info, language):
                 archive = "Kansalliskirjasto, Helsinki"
         elif archive == "Varastokirjasto":
             if language == "sv":
-                archive += "Depåbiblioteket, Kuopio"
+                archive = "Depåbiblioteket, Kuopio"
             if language == "fi":
                 archive = "Varastokirjasto, Kuopio"
         elif archive.endswith("HKA"):
