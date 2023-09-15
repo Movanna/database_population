@@ -75,10 +75,10 @@ def get_publication_info():
     FROM publication
     LEFT JOIN translation_text ON publication.translation_id = translation_text.translation_id
     LEFT JOIN publication_manuscript ON publication.id = publication_manuscript.publication_id
-    WHERE publication_collection_id = %s AND publication.published = %s AND publication.deleted = %s AND translation_text.deleted = %s AND (publication_manuscript.deleted = %s OR publication_manuscript.deleted = %s OR publication_manuscript.deleted IS NULL)
+    WHERE publication_collection_id = %s AND (publication.published = %s OR publication.published = %s) AND publication.deleted = %s AND translation_text.deleted = %s AND (publication_manuscript.deleted = %s OR publication_manuscript.deleted = %s OR publication_manuscript.deleted IS NULL)
     GROUP BY publication.id, publication_manuscript.deleted, publication_manuscript.original_filename
     ORDER BY publication_group_id, original_publication_date, publication.id"""
-    values_to_insert = (COLLECTION_ID, PUBLISHED[0], DELETED, DELETED, DELETED, 1)
+    values_to_insert = (COLLECTION_ID, PUBLISHED[0], PUBLISHED[1], DELETED, DELETED, DELETED, 1)
     cursor.execute(fetch_query, values_to_insert)
     publication_info_sorted = cursor.fetchall()
     print(len(publication_info_sorted))
