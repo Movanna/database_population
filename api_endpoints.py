@@ -613,7 +613,11 @@ def contruct_person_data(person, language, result):
     data["preposition"] = preposition
     data["full_name"] = full_name
     data["description"] = description
+    if date_born == "XXXX-XX-XX":
+        date_born = None
     data["date_born"] = date_born
+    if date_deceased == "XXXX-XX-XX":
+        date_deceased = None
     data["date_deceased"] = date_deceased
     if alias is not None:
         data["alias"] = "även kallad " + alias
@@ -660,10 +664,16 @@ def contruct_person_data(person, language, result):
                 month = month.replace("0", "", 1)
             if day.startswith("0"):
                 day = day.replace("0", "", 1)
+            if year == "XXXX" and (day != "XX" or month != "XX"):
+                year = "?"
+            if day == "XX" and month != "XX":
+                day = "?"
+            if month == "XX" and day != "XX":
+                month = "?"
             if i == 0:
                 lived_between_start = day + "." + month + "." + year
             else:
-                lived_between_end = day + "." + month + "." + year                    
+                lived_between_end = day + "." + month + "." + year
         else:
             if i == 0:
                 lived_between_start = ""
