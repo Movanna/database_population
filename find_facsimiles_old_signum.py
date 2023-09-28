@@ -81,10 +81,14 @@ def find_first_signum(info_list):
     # add the found signums to each list in the info_list
     for row in info_list:
         url = row[14]
+        # the number of pages may or may not have been recorded
+        # it can also have been recorded as e.g. "2+4",
+        # meaning 2 pages + a separate version with 4 pages
+        # get the first number
         number_of_pages = row.pop(9)
         match_string = re.match(r"\d+", number_of_pages)
         if match_string is None or number_of_pages == "":
-            row.insert(9, "")
+            row.insert(9, 0)
         else:
             number_of_pages = int(match_string.group())
             row.insert(9, number_of_pages)
@@ -167,6 +171,7 @@ def find_last_signum(extended_info_list, file_list):
     i = 0
     while i < (len(extended_info_list) - 1):
         row = extended_info_list[i]
+        number_of_pages = int(row[9])
         folder_signum = row[13]
         first_image = int(row[18])
         first_image_signum = row[11]
@@ -188,13 +193,19 @@ def find_last_signum(extended_info_list, file_list):
             # publication or not without looking at the images
             # a number of pages value has sometimes been recorded, but since
             # it doesn't correspond with the number of images, it's not of
-            # any real use
-            if next_publication_starts > first_image:
+            # any real use, apart from in the case where number of pages == 2:
+            # since these manuscripts are usually written recto/verso and not
+            # every page on a new, separate piece of paper, pages 1 & 2 
+            # thus aren't usually in the same image
+            # (but pages 2 & 3 may be in the same image, depending on how the sheet
+            # is folded)
+            if next_publication_starts == first_image + 1 and number_of_pages == 2:
+                last_image = next_publication_starts
+            elif next_publication_starts > first_image:
                 last_image = next_publication_starts - 1
-                last_image_signum = str(last_image).zfill(4)
             else:
                 last_image = next_publication_starts
-                last_image_signum = str(last_image).zfill(4)
+            last_image_signum = str(last_image).zfill(4)
         else:
             last_image = None
             last_image_signum = ""
