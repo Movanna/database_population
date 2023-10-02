@@ -158,8 +158,10 @@ def replace_date(original_date):
         original_date = original_date.replace("[", "")
         original_date = original_date.replace("]", "")
         match_string = re.search("\?", original_date)
-        if match_string:
+        match_string_2 = re.search("^ca ", original_date)
+        if match_string or match_string_2:
             original_date = original_date.replace("?", "")
+            original_date = original_date.replace("ca ", "")
             date_uncertain = True
         else:
             date_uncertain = False
@@ -275,8 +277,14 @@ def add_title(publication_id, original_date, no_date, date_uncertain, original_t
         title_swe = "odaterad " + original_title
         title_fin = "päiväämätön " + original_title
     # if there's some uncertainty about the date, add a standard phrase
-    # and leave the ? only if it signifies "month unknown"
+    # and leave a "?" only if it signifies "month unknown"
+    # also, an "approx." has to be translated, so we can't just use the 
+    # Swedish "ca" from the csv as such
+    # in the replace_date function we already set the flag
+    # which gives the right standard phrases in these cases
     elif date_uncertain is True:
+        search_string = re.compile(r"^ca ")
+        original_date = search_string.sub("", original_date)
         original_date = original_date.replace("?", "")
         search_string = re.compile(r"\.\.")
         original_date = search_string.sub(".?.", original_date)

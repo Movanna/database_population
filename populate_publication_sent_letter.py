@@ -106,23 +106,27 @@ def create_sent_publication(COLLECTION_ID, persons_list, sent_letters, name_dict
         # csv is in Finnish, but db has Swedish values for this
         if language in language_dictionary.keys():
             original_language = language_dictionary[language]
-        elif language is None:
-            language = "xx"
         else:
-            original_language = language
-        original_language = original_language.replace("?", "")
+            original_language = "xx"
         unordered_name = letter[4]
         # register the archive signums, old and new
         # and the archive folder, if present
+        old_archive_signum = letter[13]
+        new_archive_signum = letter[10]
         archive_folder = letter[8]
-        if archive_folder == "KA" or archive_folder is None:
-            archive_signum = letter[13] + ", " + letter[10]
-        # this signifies another person's archive than Mechelin's
-        # it has no old folder signum, just the new signum + the archive folder
-        elif "RM" in archive_folder:
-            archive_signum = letter[10] + ", " + letter[8]
+        if old_archive_signum is not None and new_archive_signum is not None and archive_folder is not None and archive_folder != "KA":
+            archive_signum = old_archive_signum + ", " + new_archive_signum + ", " + archive_folder
+        elif old_archive_signum is not None and new_archive_signum is not None and archive_folder == "KA":
+            archive_signum = old_archive_signum + ", " + new_archive_signum
+        elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
+            archive_signum = old_archive_signum + ", " + new_archive_signum
+        # this is material from another person's archive than Mechelin's,
+        # but still at the National Archive
+        elif old_archive_signum is None and new_archive_signum is not None and archive_folder is not None:
+            archive_signum = new_archive_signum + ", " + archive_folder
+        # this is material from another archive than the National Archive
         else:
-            archive_signum = letter[13] + ", " + letter[10] + ", " + letter[8]
+            archive_signum = archive_folder
         values_to_insert = (COLLECTION_ID, published, genre, original_publication_date, original_language, archive_signum)
         cursor.execute(insert_query, values_to_insert)
         publication_id = cursor.fetchone()[0]
@@ -173,8 +177,10 @@ def replace_date(original_date):
         original_date = original_date.replace("[", "")
         original_date = original_date.replace("]", "")
         match_string = re.search("\?", original_date)
-        if match_string:
+        match_string_2 = re.search("^ca ", original_date)
+        if match_string or match_string_2:
             original_date = original_date.replace("?", "")
+            original_date = original_date.replace("ca ", "")
             date_uncertain = True
         else:
             date_uncertain = False
@@ -252,8 +258,14 @@ def update_sent_publication_with_title(publication_id, unordered_name, persons_l
         title_swe = "odaterat" + " LM–" + title_name_part_swe
         title_fin = "päiväämätön" + " LM–" + title_name_part_fin
     # if there's some uncertainty about the date, add a standard phrase
-    # and leave the ? only if it signifies "month unknown"
+    # and leave a "?" only if it signifies "month unknown"
+    # also, an "approx." has to be translated, so we can't just use the 
+    # Swedish "ca" from the csv as such
+    # in the replace_date function we already set the flag
+    # which gives the right standard phrases in these cases
     elif date_uncertain is True:
+        search_string = re.compile(r"^ca ")
+        original_date = search_string.sub("", original_date)
         original_date = original_date.replace("?", "")
         search_string = re.compile(r"\.\.")
         original_date = search_string.sub(".?.", original_date)

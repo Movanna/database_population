@@ -111,11 +111,8 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
         # csv is in Finnish, but db has Swedish values for this
         if language in language_dictionary.keys():
             original_language = language_dictionary[language]
-        elif language is None:
-            original_language = "xx"
         else:
-            original_language = language
-            original_language = original_language.replace("?", "")
+            original_language = "xx"
         unordered_name = letter[4]
         # register the archive signums, old and new
         # and the archive folder, if present
@@ -143,8 +140,7 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
         # titles contain person info
         # titles contain the date (almost) as it has been recorded originally
         person_legacy_id, person, title_swe, title_fin, translation_id, receiver, receiver_legacy_id = update_received_publication_with_title(publication_id, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id)
-        # these are received letters/telegrams, i.e. someone else than Mechelin
-        # sent them
+        # these are received letters/telegrams, i.e. someone else than Mechelin sent them
         # update_publication_with_title found out who the sender was
         # create connection between publication and sender
         if genre == "mottaget telegram":
@@ -197,8 +193,10 @@ def replace_date(original_date):
         original_date = original_date.replace("[", "")
         original_date = original_date.replace("]", "")
         match_string = re.search("\?", original_date)
-        if match_string:
+        match_string_2 = re.search("^ca ", original_date)
+        if match_string or match_string_2:
             original_date = original_date.replace("?", "")
+            original_date = original_date.replace("ca ", "")
             date_uncertain = True
         else:
             date_uncertain = False
@@ -321,8 +319,14 @@ def update_received_publication_with_title(publication_id, unordered_name, perso
             title_swe = "odaterat " + title_name_part_swe + "–" + receiver_name_part_swe
             title_fin = "päiväämätön " + title_name_part_fin + "–" + receiver_name_part_fin
     # if there's some uncertainty about the date, add a standard phrase
-    # and leave the ? only if it signifies "month unknown"
+    # and leave a "?" only if it signifies "month unknown"
+    # also, an "approx." has to be translated, so we can't just use the 
+    # Swedish "ca" from the csv as such
+    # in the replace_date function we already set the flag
+    # which gives the right standard phrases in these cases
     elif date_uncertain is True:
+        search_string = re.compile(r"^ca ")
+        original_date = search_string.sub("", original_date)
         original_date = original_date.replace("?", "")
         search_string = re.compile(r"\.\.")
         original_date = search_string.sub(".?.", original_date)

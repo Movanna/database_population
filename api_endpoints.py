@@ -533,13 +533,15 @@ def handle_archive_info(archive_info, language):
     archive_list = []
     archive_info_split = archive_info.split("; ")
     for archive in archive_info_split:
-        if "LM/KA" in archive or "RM/KA" in archive:
+        if "LM/KA" in archive or "RM/KA" in archive or "AT/KA" in archive:
             if language == "sv":
                 archive = archive.replace("LM/KA", "(Leo Mechelins arkiv, Riksarkivet, Helsingfors)")
                 archive = archive.replace("RM/KA", "(Robert Montgomerys arkiv, Riksarkivet, Helsingfors)")
+                archive = archive.replace("AT/KA", "(Adolf Törngrens arkiv, Riksarkivet, Helsingfors)")
             if language == "fi":
                 archive = archive.replace("LM/KA", "(Leo Mechelinin arkisto, Kansallisarkisto, Helsinki)")
                 archive = archive.replace("RM/KA", "(Robert Montgomeryn arkisto, Kansallisarkisto, Helsinki)")
+                archive = archive.replace("AT/KA", "(Adolf Törngrenin arkisto, Kansallisarkisto, Helsinki)")
         elif ".KA" in archive:
             if language == "sv":
                 archive += (" (Leo Mechelins arkiv, Riksarkivet, Helsingfors)")
