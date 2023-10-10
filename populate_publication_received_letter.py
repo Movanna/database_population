@@ -92,6 +92,11 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
         # to the db recently (normally this is where you
         # define whether this document is written by LM or not)
         person_id = letter[2]
+        # this is logically impossible since an "x" should indicate that
+        # LM is the sender, and these are letters he received
+        # however, this typo exists in the csv:s and needs to be handled
+        if person_id == "x":
+            person_id = None
         # csv is in Finnish, but db has Swedish values for this
         if category in genre_dictionary.keys():
             genre = genre_dictionary[category]
@@ -126,10 +131,10 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
         elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
             archive_signum = old_archive_signum + ", " + new_archive_signum
         # this is material from another person's archive than Mechelin's,
-        # but still at the National Archive
+        # but still at the National Archives
         elif old_archive_signum is None and new_archive_signum is not None and archive_folder is not None:
             archive_signum = new_archive_signum + ", " + archive_folder
-        # this is material from another archive than the National Archive
+        # this is material from another archive than the National Archives
         else:
             archive_signum = archive_folder
         values_to_insert = (COLLECTION_ID, published, genre, original_publication_date, original_language, archive_signum)
@@ -139,7 +144,8 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
         # the titles are kept in a different table, translation_text
         # titles contain person info
         # titles contain the date (almost) as it has been recorded originally
-        person_legacy_id, person, title_swe, title_fin, translation_id, receiver, receiver_legacy_id = update_received_publication_with_title(publication_id, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id)
+        # this function may update person_id
+        person_legacy_id, person, title_swe, title_fin, translation_id, receiver, receiver_legacy_id, person_id = update_received_publication_with_title(publication_id, category, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id)
         # these are received letters/telegrams, i.e. someone else than Mechelin sent them
         # update_publication_with_title found out who the sender was
         # create connection between publication and sender
@@ -245,14 +251,14 @@ def replace_date(original_date):
 # due to the nature of the csv we started from, all titles are not going to
 # be perfect after this, so some will have to be changed later by hand
 # but hey, this is a humanist project
-def update_received_publication_with_title(publication_id, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id):
+def update_received_publication_with_title(publication_id, category, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id):
     # if this is one of those letters that eventually ended up
     # in Mechelin's hands but wasn't written directly to him:
-    # the letter's title is "Name_1–Name_2" and we need to extract 
-    # those two names
+    # the letter's title is "Name_1–Name_2" (with En Dash, not -)
+    # and we need to extract those two names
     # they are the sender and the receiver
     # (the usual case for received letters is just one name, the sender)
-    if "–" in unordered_name:
+    if unordered_name is not None and "–" in unordered_name and (category == "kirje" or category == "sähke"):
         names = unordered_name.split("–")
         unordered_name = names[0]
         receiver = names[1]
@@ -263,28 +269,23 @@ def update_received_publication_with_title(publication_id, unordered_name, perso
         receiver = None
         receiver_legacy_id = None
     # if the sender's id was in the csv
-    if person_id is not None:
-        # check if this person exists in the db
-        # if not: replace id with id for "unknown person"
-        # thus handling e.g. typos in subject_id:s in the csv
-        # or a test db with different values than the production db
-        fetch_query = """SELECT id FROM subject WHERE id = %s"""
-        value_to_insert = (person_id,)
-        cursor.execute(fetch_query, value_to_insert)
-        subject_exists = cursor.fetchone()
-        if subject_exists is None:
-            print("Person with id " + str(person_id) + " not in db!")
-            person_id = 1912
-            person = None
-            title_name_part_swe = "okänd"
-            title_name_part_fin = "tuntematon"
+    if person_id is not None and isinstance(person_id, int):
+        title_name_part_swe, title_name_part_fin, person, person_id, person_legacy_id = check_subject(person_id)
+    # else look for person_legacy_id in name_dictionary using name as key
+    # or, for persons recently added to the db:
+    # look for their id (which is not person_legacy_id but the real db id)
+    # in said dictionary, using name as key, and use that id for identifying them
+    # name parts for titles are constructed differently depending on what id is used
+    elif unordered_name is not None and unordered_name in name_dictionary.keys():
+        old_or_new_id = name_dictionary[unordered_name]
+        # legacy_id consists of "pe" + a number
+        if "pe" in old_or_new_id:
+            person_legacy_id = old_or_new_id
+            title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part(persons_list, person_legacy_id, person_id)
+        # db id is a number
         else:
-            title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part_from_id(person_id)
-        person_legacy_id = None
-    # else look for person_legacy_id in dictionary using name as key 
-    elif unordered_name in name_dictionary.keys():
-        person_legacy_id = name_dictionary[unordered_name]
-        title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part(persons_list, person_legacy_id, person_id)
+            person_id = old_or_new_id
+            title_name_part_swe, title_name_part_fin, person, person_id, person_legacy_id = check_subject(person_id)
     # if name isn't in dictionary and there's no id, we don't know this sender
     else:
         person_legacy_id = None
@@ -294,15 +295,15 @@ def update_received_publication_with_title(publication_id, unordered_name, perso
     # now we've got the sender's identity
     # if this letter has a receiver which is not LM:
     # get the receiver's identity
-    if receiver is not None:
+    if receiver is not None and receiver in name_dictionary.keys():
         receiver_id = None
-        if receiver in name_dictionary.keys():
-            receiver_legacy_id = name_dictionary[receiver]
-            receiver_name_part_swe, receiver_name_part_fin, receiver_person = construct_publication_title_name_part(persons_list, receiver_legacy_id, receiver_id)
-        else:
-            receiver_legacy_id = None
-            receiver_name_part_swe = "okänd"
-            receiver_name_part_fin = "tuntematon"
+        receiver_legacy_id = name_dictionary[receiver]
+        receiver_name_part_swe, receiver_name_part_fin, receiver_person = construct_publication_title_name_part(persons_list, receiver_legacy_id, receiver_id)
+    else:
+        receiver_id = None
+        receiver_legacy_id = None
+        receiver_name_part_swe = "okänd"
+        receiver_name_part_fin = "tuntematon"
     # make some slight changes to original_date, if needed, since it'll be part of a title
     # an original_date written as 1/13.11.1885 means that the document
     # has both an old style (Julian) and a new style (Gregorian) date
@@ -352,7 +353,31 @@ def update_received_publication_with_title(publication_id, unordered_name, perso
     update_query = """UPDATE publication SET translation_id = %s WHERE id = %s"""
     values_to_insert = (translation_id, publication_id)
     cursor.execute(update_query, values_to_insert)
-    return person_legacy_id, person, title_swe, title_fin, translation_id, receiver, receiver_legacy_id
+    return person_legacy_id, person, title_swe, title_fin, translation_id, receiver, receiver_legacy_id, person_id
+
+# if the id is in the csv (due to the person having been added
+# to the db very recently and therefore isn't present in the name_dictionary)
+# or if the person has been added to name_dictionary with a new id
+# and not with legacy_id (because he/she is a recent db addition)
+def check_subject(person_id):
+    # check if this person exists in the db
+    # if not: replace id with id for "unknown person"
+    # thus handling e.g. typos in subject_id:s in the csv
+    # or a test db with different values than the production db
+    fetch_query = """SELECT id FROM subject WHERE id = %s"""
+    value_to_insert = (person_id,)
+    cursor.execute(fetch_query, value_to_insert)
+    subject_exists = cursor.fetchone()
+    if subject_exists is None:
+        print("Person with id " + str(person_id) + " not in db!")
+        person_id = 1912
+        person = None
+        title_name_part_swe = "okänd"
+        title_name_part_fin = "tuntematon"
+    else:
+        title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part_from_id(person_id)
+    person_legacy_id = None
+    return title_name_part_swe, title_name_part_fin, person, person_id, person_legacy_id
 
 # use person_legacy_id to find out the right person
 def construct_publication_title_name_part(persons_list, person_legacy_id, person_id):
@@ -595,6 +620,7 @@ def create_name_part_for_file(person, person_id):
     name_part = name_part.replace("í", "i")
     name_part = name_part.replace("ô", "o")
     name_part = name_part.replace("ó", "o")
+    name_part = name_part.replace("ò", "o")
     name_part = name_part.replace("æ", "ae")
     name_part = name_part.replace("œ", "oe")
     name_part = name_part.replace("ß", "ss")
