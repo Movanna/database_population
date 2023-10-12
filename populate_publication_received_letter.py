@@ -269,7 +269,7 @@ def update_received_publication_with_title(publication_id, category, unordered_n
         receiver = None
         receiver_legacy_id = None
     # if the sender's id was in the csv
-    if person_id is not None and isinstance(person_id, int):
+    if person_id is not None and person_id.isdigit():
         title_name_part_swe, title_name_part_fin, person, person_id, person_legacy_id = check_subject(person_id)
     # else look for person_legacy_id in name_dictionary using name as key
     # or, for persons recently added to the db:
