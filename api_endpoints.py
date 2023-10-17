@@ -467,6 +467,7 @@ def get_metadata(project, publication_id, language):
                 # the metadata query only fetched the main facsimile,
                 # so there's just one facsimile to add here
                 # only add it once
+                # since this is the main facsimile, its priority value is always 1
                 if data["facsimiles"] == []:
                     archive_info = row.get("archive_info")
                     facs_coll_id = row.get("facs_coll_id")
@@ -474,6 +475,7 @@ def get_metadata(project, publication_id, language):
                         archive_info = handle_archive_info(archive_info, language)
                         facsimile_data = {
                             "facs_coll_id": facs_coll_id,
+                            "priority": 1,
                             "facsimile_title": row["publication_title"],
                             "archive_info": archive_info,
                             "number_of_images": row["number_of_images"],
@@ -484,6 +486,7 @@ def get_metadata(project, publication_id, language):
                     elif archive_info is None and facs_coll_id is not None:
                         facsimile_data = {
                             "facs_coll_id": facs_coll_id,
+                            "priority": 1,
                             "facsimile_title": row["publication_title"],
                             "archive_info": None,
                             "number_of_images": row["number_of_images"],
@@ -501,6 +504,7 @@ def get_metadata(project, publication_id, language):
                         archive_info = handle_archive_info(archive_info, language)
                         facsimile_data = {
                             "facs_coll_id": facs_coll_id,
+                            "priority": facsimile["priority"],
                             "facsimile_title": facsimile["facsimile_title"],
                             "archive_info": archive_info,
                             "number_of_images": facsimile["number_of_images"],
@@ -511,6 +515,7 @@ def get_metadata(project, publication_id, language):
                     elif archive_info is None and facs_coll_id is not None:
                         facsimile_data = {
                             "facs_coll_id": facs_coll_id,
+                            "priority": facsimile["priority"],
                             "facsimile_title": facsimile["facsimile_title"],
                             "archive_info": None,
                             "number_of_images": facsimile["number_of_images"],
@@ -518,6 +523,11 @@ def get_metadata(project, publication_id, language):
                             "external_url": facsimile["external_url"]
                         }
                         data["facsimiles"].append(facsimile_data)
+                # the facsimiles will be displayed by the frontend
+                # in the order of this list, so let's sort them according to
+                # their priority value
+                # if there's just the main facsimile, there's nothing to sort
+                data["facsimiles"] = sorted(data["facsimiles"], key=lambda x: x["priority"])
     if published_collections != [] and metadata != []:
         response = jsonify(data)
         return response, 200

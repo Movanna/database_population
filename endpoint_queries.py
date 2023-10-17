@@ -309,7 +309,7 @@ def get_publication_metadata(publication_id, language, published_collections):
 # for this publication
 def get_alternative_facsimiles(publication_id):
     connection = db_engine.connect()
-    select = "SELECT publication_facsimile_collection_id AS facs_coll_id, title AS facsimile_title, description AS archive_info, number_of_pages AS number_of_images, page_comment AS image_number_info, external_url FROM publication_facsimile AS f, publication_facsimile_collection AS fc WHERE f.publication_id = :p_id AND f.publication_facsimile_collection_id = fc.id AND priority > 1 AND f.deleted = 0 AND fc.deleted = 0;"
+    select = "SELECT publication_facsimile_collection_id AS facs_coll_id, priority, title AS facsimile_title, description AS archive_info, number_of_pages AS number_of_images, page_comment AS image_number_info, external_url FROM publication_facsimile AS f, publication_facsimile_collection AS fc WHERE f.publication_id = :p_id AND f.publication_facsimile_collection_id = fc.id AND priority > 1 AND f.deleted = 0 AND fc.deleted = 0;"
     statement = text(select).bindparams(p_id=publication_id)
     result = []
     for row in connection.execute(statement).fetchall():
