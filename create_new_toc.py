@@ -48,6 +48,10 @@ DELETED = 0
 TRANSLATION_TEXT_LANGUAGE = ["sv", "fi"]
 SOURCE_FOLDER = "../GitHub/leomechelin_files/"
 
+# custom exception class
+class GroupNotInCollectionError(Exception):
+    pass
+
 # get the relevant info for all publications in a collection
 def get_publication_info():
     # the query initially returns 4-6 tuples per publication id:
@@ -195,6 +199,9 @@ def create_toc(publication_info_with_content, toc_language, genre_dictionary):
         # should generate a group level
         # with publications belonging to the same group as children
         if i == 0 or group != publication_info_with_content[i - 1][1]:
+            # make sure that the publication's group_id
+            # is actually one that is ok for this collection
+            check_group(group, publication_id)
             # Finnish group titles are in translation_text
             if toc_language == "fi":
                 fetch_query = """SELECT text FROM translation_text, publication_group WHERE publication_group.translation_id = translation_text.translation_id AND publication_group.id = %s"""
@@ -310,7 +317,8 @@ def fix_genre(toc_language, genre_sv, genre_dictionary):
         # genre in db is in Swedish, check dictionary for translation
         if toc_language == "fi":
             if genre in genre_dictionary.keys():
-                genre = genre_dictionary[genre].capitalize()
+                genre = genre_dictionary[genre]
+        genre = genre.capitalize()
     # if toc_language is fi and there's a single genre value
     elif toc_language == "fi":
         if genre_sv in genre_dictionary.keys():
@@ -320,6 +328,34 @@ def fix_genre(toc_language, genre_sv, genre_dictionary):
     else:
         genre = genre_sv.capitalize()
     return genre
+
+# check if group_id actually belongs to this collection
+# if not, raise an exception so that the value can be corrected
+# in the db and doesn't end up in the toc
+# e.g., group values for "unknown time period" are ok while the collection
+# is only published internally, but can then be removed from the lists below
+# before the external publishing
+def check_group(group, publication_id):
+    if COLLECTION_ID == 1:
+        collection_groups = [1, 2, 3, 4]
+    elif COLLECTION_ID == 2:
+        collection_groups = [6, 13, 21, 30]
+    elif COLLECTION_ID == 3:
+        collection_groups = [51, 63, 76, 90]
+    elif COLLECTION_ID == 4:
+        collection_groups = [121, 122, 123, 124]
+    elif COLLECTION_ID == 5:
+        collection_groups = [125, 126, 127, 128, 129]
+    elif COLLECTION_ID == 6:
+        collection_groups = [130, 131, 132, 133, 134]
+    elif COLLECTION_ID == 7:
+        collection_groups = [135, 136, 137, 138]
+    elif COLLECTION_ID == 8:
+        collection_groups = [139, 140, 141, 142]
+    elif COLLECTION_ID == 9:
+        collection_groups = [143, 144, 145, 146]
+    if group not in collection_groups:
+        raise GroupNotInCollectionError(f"Publication id {publication_id} with group id {group} is in the wrong group for this collection.")
 
 # save toc/dictionary as file
 def write_dict_to_file(dictionary, filename):
