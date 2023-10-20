@@ -7,7 +7,7 @@
 # + what's stated in the corresponding @app.route() decorator,
 # where <project> is leomechelin. Examples:
 # https://leomechelin.fi/api/leomechelin/publications/97/metadata/sv
-# https://leomechelin.fi/api/leomechelin/text/downloadable/txt/1/100/est/sv
+# https://leomechelin.fi/api/leomechelin/text/downloadable/txt/1/100/est-i18n/sv
 # https://leomechelin.fi/api/leomechelin/text/1/100/ms
 # https://leomechelin.fi/api/leomechelin/subject/1/sv
 
@@ -25,7 +25,7 @@ from src.transform_ms_normalized import transform as transform_ms_normalized
 from src.transform_downloadable_xml import transform as transform_downloadable_xml
 # I contributed to this transformation, but since I didn't write it
 # myself, it's not part of my transform_texts repo.
-from meilisearch_pre_parse import pre_transform
+from src.transform_downloadable_txt import transform_to_txt
 # These are the database queries the endpoints use
 import src.endpoint_queries as queries
 
@@ -119,7 +119,7 @@ def get_ms(project, collection_id, publication_id):
 
 # endpoint for download of read texts
 # two downloadable formats: txt, xml
-@app.route("/api/<project>/text/downloadable/<format>/<collection_id>/<publication_id>/est/<language>")
+@app.route("/api/<project>/text/downloadable/<format>/<collection_id>/<publication_id>/est-i18n/<language>")
 @cross_origin()
 def get_downloadable_text(project, format, collection_id, publication_id, language):
     published_collections = get_published_collections(project)
@@ -140,7 +140,7 @@ def get_downloadable_text(project, format, collection_id, publication_id, langua
             if format == "txt":
                 file_path = "./" + file_path
                 # I didn't write this transformation myself, but I contributed to it
-                content = pre_transform(file_path, publication_id)
+                content = transform_to_txt(file_path, publication_id)
                 data = {
                     "id": "{}_{}_{}_est".format(collection_id, publication_id, language),
                     "content": content,
@@ -280,7 +280,7 @@ def get_downloadable_text(project, format, collection_id, publication_id, langua
         }), 403
 
 # endpoint for the read text column
-@app.route("/api/<project>/text/<collection_id>/<publication_id>/est/<language>")
+@app.route("/api/<project>/text/<collection_id>/<publication_id>/est-i18n/<language>")
 @cross_origin()
 def get_est(project, collection_id, publication_id, language):
     published_collections = get_published_collections(project)
@@ -334,8 +334,8 @@ def get_facsimiles(project, publication_id):
 def get_collections(project, language):
     published_collections = get_published_collections(project)
     if published_collections != []:
-        collection_data = queries.get_collection_data(project, language, published_collections)
-        response = jsonify(collection_data)
+        collections_data = queries.get_collections_data(project, language, published_collections)
+        response = jsonify(collections_data)
         return response, 200
     else:
         message = "Content is not yet published."
@@ -775,6 +775,22 @@ def get_urn_and_reference(project, url):
     else:    
         response = jsonify({**dict(urn_and_reference_data)})
     return response, 200
+
+# endpoint for the text download modal
+@app.route("/api/<project>/collection/<collection_id>/i18n/<language>")
+@cross_origin()
+def get_collection(project, collection_id, language):
+    published_collections = get_published_collections(project)
+    if published_collections != [] and int(collection_id) in published_collections:
+        collection_data = queries.get_collection_data(project, collection_id, language)
+        response = [dict(collection_data)]
+        return jsonify(response), 200
+    else:
+        message = "Content is not yet published."
+        response_data = {
+            "error": message
+        }
+        return jsonify([response_data]), 403
 
 # endpoint for the table of contents
 @app.route("/api/<project>/toc/<collection_id>/<language>")

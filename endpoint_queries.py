@@ -23,7 +23,7 @@ def get_collection_published_status(project):
     connection = db_engine.connect()
     if project == "leomechelin":
         project_id = 1
-    select = "SELECT id, published FROM publication_collection WHERE project_id = :p_id;"
+    select = "SELECT id, published FROM publication_collection WHERE project_id = :p_id AND deleted = 0;"
     statement = text(select).bindparams(p_id=project_id)
     result = []
     for row in connection.execute(statement).fetchall():
@@ -57,7 +57,7 @@ def get_est_file_path(publication_id, language):
     else:
         return result["file"]
 
-# get manuscript data
+# get manuscript/transcription data
 def get_ms_data(publication_id):
     connection = db_engine.connect()
     select = "SELECT id, name AS title, original_filename, original_language AS language, deleted FROM publication_manuscript WHERE publication_id = :p_id;"
@@ -75,8 +75,8 @@ def publication_deleted(publication_id):
     connection.close()
     return result
 
-# get collection data
-def get_collection_data(project, language, published_collections):
+# get data for all collections (serving the page called "content")
+def get_collections_data(project, language, published_collections):
     if project == "leomechelin":
         project_id = 1
     connection = db_engine.connect()
@@ -395,8 +395,23 @@ def get_urn_data(project, url):
         project_id = 1
     url_without_pub_id = re.sub(r"\d*$|\d*/$", "", url)
     connection = db_engine.connect()
-    select = "SELECT id, urn, url, reference_text FROM urn_lookup where url = :url AND project_id = :p_id AND deleted = 0;"
+    select = "SELECT id, urn, url, reference_text FROM urn_lookup WHERE url = :url AND project_id = :p_id AND deleted = 0;"
     statement = text(select).bindparams(url=url_without_pub_id, p_id=project_id)
+    result = connection.execute(statement).fetchone()
+    connection.close()
+    return result
+
+# get collection data for the text download
+# for the collection
+def get_collection_data(project, collection_id, language):
+    if project == "leomechelin":
+        project_id = 1
+    connection = db_engine.connect()
+    if language == "sv":
+        select = "SELECT id, name, publication_collection_introduction_id, publication_collection_title_id, published FROM publication_collection WHERE project_id = :p_id AND id = :c_id;"
+    if language == "fi":
+        select = "SELECT c.id, text AS name, publication_collection_introduction_id, publication_collection_title_id, published FROM publication_collection AS c, translation_text AS tt WHERE project_id = :p_id AND c.translation_id = tt.translation_id AND c.id = :c_id;"
+    statement = text(select).bindparams(p_id=project_id, c_id=collection_id)
     result = connection.execute(statement).fetchone()
     connection.close()
     return result
