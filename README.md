@@ -100,7 +100,7 @@ A Flask app is used to build the website's API.
 
 ### 6. a) api_endpoints.py
 This script creates the endpoints for the API. The live API endpoints can be found at https://leomechelin.fi  + what's stated in the corresponding @app.route() decorator, where the project value is "leomechelin". Examples:
-[metadata endpoint](https://leomechelin.fi/api/leomechelin/publications/100/metadata/sv), [endpoint for downloadable txt file](https://leomechelin.fi/api/leomechelin/text/downloadable/txt/1/100/est/sv), [manuscript endpoint](https://leomechelin.fi/api/leomechelin/text/1/100/ms).
+[metadata endpoint](https://leomechelin.fi/api/leomechelin/publications/100/metadata/sv), [endpoint for downloadable txt file](https://leomechelin.fi/api/leomechelin/text/downloadable/txt/1/100/est-i18n/sv), [manuscript/transcription endpoint](https://leomechelin.fi/api/leomechelin/text/1/100/ms).
 
 ### 6. b) endpoint_queries.py
 This script handles the database queries for the API endpoints.
