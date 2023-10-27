@@ -23,8 +23,6 @@ from src.replaces_xslt import transform
 from src.transform_ms import transform as transform_ms
 from src.transform_ms_normalized import transform as transform_ms_normalized
 from src.transform_downloadable_xml import transform as transform_downloadable_xml
-# I contributed to this transformation, but since I didn't write it
-# myself, it's not part of my transform_texts repo.
 from src.transform_downloadable_txt import transform_to_txt
 # These are the database queries the endpoints use
 import src.endpoint_queries as queries
@@ -39,6 +37,9 @@ app.config["CORS_HEADERS"] = "Content-Type"
 # the API will serve different content depending on where
 # the request comes from
 def get_published_collections(project):
+    # the given project value obviously has to be this project
+    if project != "leomechelin":
+        return None
     show_internally_published = False
     published_collections = []
     origin = request.environ.get("HTTP_ORIGIN")
@@ -55,11 +56,16 @@ def get_published_collections(project):
                 published_collections.append(collection_id)
     return published_collections
 
-# endpoint for the manuscript column
+# endpoints for the manuscript/transcription column
+# the one with ms_id used for download
 @app.route("/api/<project>/text/<collection_id>/<publication_id>/ms")
+@app.route("/api/<project>/text/<collection_id>/<publication_id>/ms/<ms_id>")
 @cross_origin()
-def get_ms(project, collection_id, publication_id):
+def get_ms(project, collection_id, publication_id, ms_id=None):
     published_collections = get_published_collections(project)
+    # None means that the given project value was wrong
+    if published_collections is None:
+        abort(404)
     publication_published_status = queries.get_publication_published_status(collection_id, publication_id)
     # if status is None, then the given combo of collection id 
     # and publication id doesn't exist
@@ -67,8 +73,8 @@ def get_ms(project, collection_id, publication_id):
         abort(404)
     if published_collections != [] and int(collection_id) in published_collections and (publication_published_status == 1 or publication_published_status == 2):
         ms_data = queries.get_ms_data(publication_id)
-        # if the publication simply doesn't have a ms
-        # and only consists of the read text
+        # if the publication simply doesn't have an ms
+        # and only consists of the established/read text
         empty_data = {
             "id": "{}_{}".format(collection_id, publication_id),
             "manuscripts": []
@@ -81,6 +87,10 @@ def get_ms(project, collection_id, publication_id):
             file = ms_data[2]
             language = ms_data[3]
             deleted = ms_data[4]
+            if ms_id is not None:
+                # if an ms_id was provided and it was wrong
+                if str(id) != str(ms_id):
+                    abort(404)
             if deleted == 0:
                 data = {
                     "id": "{}_{}".format(collection_id, publication_id),
@@ -123,10 +133,15 @@ def get_ms(project, collection_id, publication_id):
 @cross_origin()
 def get_downloadable_text(project, format, collection_id, publication_id, language):
     published_collections = get_published_collections(project)
+    # None means that the given project value was wrong
+    if published_collections is None:
+        abort(404)
     publication_published_status = queries.get_publication_published_status(collection_id, publication_id)
+    no_publication = queries.publication_deleted(publication_id)
     # if status is None, then the given combo of collection id 
     # and publication id doesn't exist
-    if publication_published_status is None:
+    # and if the publication is deleted, there's nothing to fetch
+    if publication_published_status is None or no_publication[0] == 1:
         abort(404)
     if published_collections != [] and int(collection_id) in published_collections and (publication_published_status == 1 or publication_published_status == 2):
         file_path = queries.get_est_file_path(publication_id, language)
@@ -137,138 +152,41 @@ def get_downloadable_text(project, format, collection_id, publication_id, langua
                 "language": language
             }
         else:
+            est_or_ms = "est"
             if format == "txt":
                 file_path = "./" + file_path
-                # I didn't write this transformation myself, but I contributed to it
-                content = transform_to_txt(file_path, publication_id)
+                content = transform_to_txt(file_path, est_or_ms)
                 data = {
                     "id": "{}_{}_{}_est".format(collection_id, publication_id, language),
                     "content": content,
                     "language": language
                 }
-            if format == "xml":
-                # add metadata to the xml content
-                # the metadata goes into the <teiHeader> and mainly follows TEI standards
                 metadata = queries.get_publication_metadata(publication_id, language, published_collections)
                 if metadata != []:
-                    bibl_data = {
-                        "publication_title": None,
-                        "publication_subtitle": None,
-                        "published_by": None,
-                        "document_type": None,
-                        "original_language": None,
-                        "orig_lang_abbr": [],
-                        "publication_date": None,
-                        "author": [],
-                        "sender": [],
-                        "recipient": [],
-                        "translations": []
-                    }
-                    # keep track of these, so that the same value isn't added twice
-                    translation_languages = set()
-                    authors = set()
-                    senders = set()
-                    recipients = set()
-                    translators = set()
-                    for row in metadata:
-                        publication_title = row.get("publication_title")
-                        if publication_title is not None and bibl_data["publication_title"] is None:
-                            bibl_data["publication_title"] = publication_title
-                        publication_subtitle = row.get("publication_subtitle")
-                        if publication_subtitle is not None and bibl_data["publication_subtitle"] is None:
-                            bibl_data["publication_subtitle"] = publication_subtitle
-                        published_by = row.get("published_by")
-                        if published_by is not None and bibl_data["published_by"] is None:
-                            bibl_data["published_by"] = published_by
-                        document_type = row.get("document_type")
-                        if document_type is not None and bibl_data["document_type"] is None:
-                            if language == "sv":
-                                bibl_data["document_type"] = document_type
-                            if language == "fi":
-                                # the value may contain more than one document type, as a string
-                                # each value has to be translated since values are in sv in the db
-                                document_types = document_type.split(", ")
-                                translated_document_types = []
-                                for doc_type in document_types:
-                                    document_types_fi = get_document_types_fi_dict()
-                                    if doc_type in document_types_fi.keys():
-                                        translated_document_types.append(document_types_fi[doc_type])
-                                    else:
-                                        translated_document_types.append(document_types_fi["XX"])
-                                bibl_data["document_type"] = ", ".join(translated_document_types)
-                        original_language = row.get("original_language")
-                        if original_language is not None and bibl_data["original_language"] is None and bibl_data["orig_lang_abbr"] == []:
-                            # the value may contain more than one language, as a string
-                            original_languages = original_language.split(", ")
-                            unabbreviated_languages = []
-                            abbreviated_languages = []
-                            if language == "sv":
-                                for orig_lang in original_languages:
-                                    abbreviated_languages.append(orig_lang)
-                                    languages_sv = get_languages_sv_dict()
-                                    if orig_lang in languages_sv.keys():
-                                        unabbreviated_languages.append(languages_sv[orig_lang])
-                                    else:
-                                        unabbreviated_languages.append(languages_sv["XX"])
-                            if language == "fi":
-                                for orig_lang in original_languages:
-                                    abbreviated_languages.append(orig_lang)
-                                    languages_fi = get_languages_fi_dict()
-                                    if orig_lang in languages_fi.keys():
-                                        unabbreviated_languages.append(languages_fi[orig_lang])
-                                    else:
-                                        unabbreviated_languages.append(languages_fi["XX"])
-                            bibl_data["original_language"] = ", ".join(unabbreviated_languages)
-                            bibl_data["orig_lang_abbr"].extend(abbreviated_languages)
-                        publication_date = row.get("publication_date")
-                        if publication_date is not None and bibl_data["publication_date"] is None:
-                            bibl_data["publication_date"] = publication_date
-                        author = row.get("author")
-                        if author is not None and author not in authors:
-                            bibl_data["author"].append(author)
-                            authors.add(author)
-                        sender = row.get("sender")
-                        if sender is not None and sender not in senders:
-                            bibl_data["sender"].append(sender)
-                            senders.add(sender)
-                        recipient = row.get("recipient")
-                        if recipient is not None and recipient not in recipients:
-                            bibl_data["recipient"].append(recipient)
-                            recipients.add(recipient)
-                        translated_into = row.get("translated_into")
-                        if translated_into is not None:
-                            if language == "sv":
-                                if translated_into == "sv":
-                                    unabbreviated_translated_into = "till svenska"
-                                if translated_into == "fi":
-                                    unabbreviated_translated_into = "till finska"
-                            if language == "fi":
-                                if translated_into == "sv":
-                                    unabbreviated_translated_into = "ruotsiksi"
-                                if translated_into == "fi":
-                                    unabbreviated_translated_into = "suomeksi"
-                            translator = row.get("translator")
-                            if translated_into not in translation_languages:
-                                translation_data = {
-                                    "translated_into": unabbreviated_translated_into,
-                                    "translators": []
-                                }
-                                bibl_data["translations"].append(translation_data)
-                                translation_languages.add(translated_into)
-                            # find the translation data for the translated language
-                            for translation in bibl_data["translations"]:
-                                if translation["translated_into"] == unabbreviated_translated_into and translator not in translators:
-                                    translation["translators"].append(translator)
-                                    translators.add(translator)
-                                    break
+                    bibl_data = create_bibl_data(metadata, publication_id, language, est_or_ms)
+                    # don't overwrite the id from the data dict above when merging dicts
+                    bibl_data.pop("id")
+                    data.update(bibl_data)
+                    # if this text's language value isn't in orig_lang_abbr
+                    # then there's a separate manuscript file (or no manuscript file at all)
+                    # and we shouldn't connect that manuscript_id to this text
+                    if language not in data.get("orig_lang_abbr", []):
+                        data.pop("manuscript_id")
+            elif format == "xml":
+                metadata = queries.get_publication_metadata(publication_id, language, published_collections)
+                if metadata != []:
+                    bibl_data = create_bibl_data(metadata, publication_id, language, est_or_ms)
                 else:
                     bibl_data = None
-                content = transform_downloadable_xml(file_path, language, bibl_data)
+                content = transform_downloadable_xml(file_path, language, bibl_data, est_or_ms)
                 data = {
                     "id": "{}_{}_{}_est".format(collection_id, publication_id, language),
                     "content": content,
                     "language": language
                 }
+            # if given format is non-existent
+            else:
+                abort(404)
         response = jsonify(data)
         return response, 200
     else:
@@ -279,11 +197,219 @@ def get_downloadable_text(project, format, collection_id, publication_id, langua
             "error": message
         }), 403
 
-# endpoint for the read text column
+# endpoint for download of ms/transcription
+# two downloadable formats: txt, xml 
+@app.route("/api/<project>/text/downloadable/<format>/<collection_id>/<publication_id>/ms/<ms_id>")
+@cross_origin()
+def get_downloadable_text_for_ms(project, format, collection_id, publication_id, ms_id):
+    published_collections = get_published_collections(project)
+    # None means that the given project value was wrong
+    if published_collections is None:
+        abort(404)
+    publication_published_status = queries.get_publication_published_status(collection_id, publication_id)
+    no_publication = queries.publication_deleted(publication_id)
+    # if status is None, then the given combo of collection id 
+    # and publication id doesn't exist
+    # and if the publication is deleted, there's nothing to fetch
+    if publication_published_status is None or no_publication[0] == 1:
+        abort(404)
+    if published_collections != [] and int(collection_id) in published_collections and (publication_published_status == 1 or publication_published_status == 2):
+        ms_data = queries.get_ms_data(publication_id)
+        id = ms_data[0]
+        file_path = ms_data[2]
+        original_language = ms_data[3]
+        deleted = ms_data[4]
+        # if the given ms_id was wrong
+        if str(id) != str(ms_id):
+            abort(404)
+        # if the publication simply doesn't have an ms
+        # and only consists of the established/read text
+        if ms_data is None or deleted == 1:
+            data = {
+                "id": "{}_{}_{}_ms".format(collection_id, publication_id, ms_id),
+                "content": "",
+            }
+        else:
+            est_or_ms = "ms"
+            if "sv" in original_language:
+                language = "sv"
+            elif "fi" in original_language:
+                language = "fi"
+            else:
+                language = "sv"
+            if format == "txt":
+                file_path = "./" + file_path
+                content = transform_to_txt(file_path, est_or_ms)
+                data = {
+                    "id": "{}_{}_{}_ms".format(collection_id, publication_id, ms_id),
+                    "content": content,
+                    "language": original_language
+                }
+                metadata = queries.get_publication_metadata(publication_id, language, published_collections)
+                if metadata != []:
+                    bibl_data = create_bibl_data(metadata, publication_id, language, est_or_ms)
+                    # don't overwrite the id from the data dict above when merging dicts
+                    # also delete translations since this is the original text
+                    bibl_data.pop("id")
+                    bibl_data.pop("translations")
+                    data.update(bibl_data)
+            elif format == "xml":
+                metadata = queries.get_publication_metadata(publication_id, language, published_collections)
+                if metadata != []:
+                    bibl_data = create_bibl_data(metadata, publication_id, language, est_or_ms)
+                else:
+                    bibl_data = None
+                content = transform_downloadable_xml(file_path, language, bibl_data, est_or_ms)
+                data = {
+                    "id": "{}_{}_{}_ms".format(collection_id, publication_id, ms_id),
+                    "content": content,
+                    "language": original_language
+                }
+            # if given format is non-existent
+            else:
+                abort(404)
+        response = jsonify(data)
+        return response, 200
+    else:
+        message = "Content is not yet published."
+        return jsonify({
+            "id": "{}_{}_".format(collection_id, publication_id),
+            "language": language,
+            "error": message
+        }), 403
+
+def create_bibl_data(metadata, publication_id, language, est_or_ms):
+    bibl_data = {
+        "id": publication_id,
+        "manuscript_id": None,
+        "publication_title": None,
+        "publication_subtitle": None,
+        "published_by": None,
+        "document_type": None,
+        "original_language": None,
+        "orig_lang_abbr": [],
+        "publication_date": None,
+        "publication_archive_info": None,
+        "author": [],
+        "sender": [],
+        "recipient": [],
+        "translations": []
+    }
+    # keep track of these, so that the same value isn't added twice
+    translation_languages = set()
+    authors = set()
+    senders = set()
+    recipients = set()
+    translators = set()
+    for row in metadata:
+        manuscript_id = row.get("manuscript_id")
+        if manuscript_id is not None and bibl_data["manuscript_id"] is None:
+            bibl_data["manuscript_id"] = manuscript_id
+        publication_title = row.get("publication_title")
+        if publication_title is not None and bibl_data["publication_title"] is None:
+            bibl_data["publication_title"] = publication_title
+        publication_subtitle = row.get("publication_subtitle")
+        if publication_subtitle is not None and bibl_data["publication_subtitle"] is None:
+            bibl_data["publication_subtitle"] = publication_subtitle
+        published_by = row.get("published_by")
+        if published_by is not None and bibl_data["published_by"] is None:
+            bibl_data["published_by"] = published_by
+        document_type = row.get("document_type")
+        if document_type is not None and bibl_data["document_type"] is None:
+            if language == "sv":
+                bibl_data["document_type"] = document_type
+            if language == "fi":
+                # the value may contain more than one document type, as a string
+                # each value has to be translated since values are in sv in the db
+                document_types = document_type.split(", ")
+                translated_document_types = []
+                for doc_type in document_types:
+                    document_types_fi = get_document_types_fi_dict()
+                    if doc_type in document_types_fi.keys():
+                        translated_document_types.append(document_types_fi[doc_type])
+                    else:
+                        translated_document_types.append(document_types_fi["XX"])
+                bibl_data["document_type"] = ", ".join(translated_document_types)
+        original_language = row.get("original_language")
+        if original_language is not None and bibl_data["original_language"] is None and bibl_data["orig_lang_abbr"] == []:
+            # the value may contain more than one language, as a string
+            original_languages = original_language.split(", ")
+            unabbreviated_languages = []
+            abbreviated_languages = []
+            if language == "sv":
+                for orig_lang in original_languages:
+                    abbreviated_languages.append(orig_lang)
+                    languages_sv = get_languages_sv_dict()
+                    if orig_lang in languages_sv.keys():
+                        unabbreviated_languages.append(languages_sv[orig_lang])
+                    else:
+                        unabbreviated_languages.append(languages_sv["XX"])
+            if language == "fi":
+                for orig_lang in original_languages:
+                    abbreviated_languages.append(orig_lang)
+                    languages_fi = get_languages_fi_dict()
+                    if orig_lang in languages_fi.keys():
+                        unabbreviated_languages.append(languages_fi[orig_lang])
+                    else:
+                        unabbreviated_languages.append(languages_fi["XX"])
+            bibl_data["original_language"] = ", ".join(unabbreviated_languages)
+            bibl_data["orig_lang_abbr"].extend(abbreviated_languages)
+        publication_date = row.get("publication_date")
+        if publication_date is not None and bibl_data["publication_date"] is None:
+            bibl_data["publication_date"] = publication_date
+        publication_archive_info = row.get("publication_archive_info")
+        if publication_archive_info is not None and bibl_data["publication_archive_info"] is None:
+            publication_archive_info = handle_archive_info(publication_archive_info, language)
+            bibl_data["publication_archive_info"] = publication_archive_info
+        author = row.get("author")
+        if author is not None and author not in authors:
+            bibl_data["author"].append(author)
+            authors.add(author)
+        sender = row.get("sender")
+        if sender is not None and sender not in senders:
+            bibl_data["sender"].append(sender)
+            senders.add(sender)
+        recipient = row.get("recipient")
+        if recipient is not None and recipient not in recipients:
+            bibl_data["recipient"].append(recipient)
+            recipients.add(recipient)
+        if est_or_ms == "est":
+            translated_into = row.get("translated_into")
+            if translated_into is not None:
+                if language == "sv":
+                    if translated_into == "sv":
+                        unabbreviated_translated_into = "till svenska"
+                    if translated_into == "fi":
+                        unabbreviated_translated_into = "till finska"
+                if language == "fi":
+                    if translated_into == "sv":
+                        unabbreviated_translated_into = "ruotsiksi"
+                    if translated_into == "fi":
+                        unabbreviated_translated_into = "suomeksi"
+                translator = row.get("translator")
+                if translated_into not in translation_languages:
+                    translation_data = {
+                        "translated_into": unabbreviated_translated_into,
+                        "translators": []
+                    }
+                    bibl_data["translations"].append(translation_data)
+                    translation_languages.add(translated_into)
+                # find the translation data for the translated language
+                for translation in bibl_data["translations"]:
+                    if translation["translated_into"] == unabbreviated_translated_into and translator not in translators:
+                        translation["translators"].append(translator)
+                        translators.add(translator)
+                        break
+    return bibl_data
+
+# endpoint for the read text column, "est"
 @app.route("/api/<project>/text/<collection_id>/<publication_id>/est-i18n/<language>")
 @cross_origin()
 def get_est(project, collection_id, publication_id, language):
     published_collections = get_published_collections(project)
+    # None means that the given project value was wrong
+    if published_collections is None:
+        abort(404)
     publication_published_status = queries.get_publication_published_status(collection_id, publication_id)
     # if status is None, then the given combo of collection id 
     # and publication id doesn't exist
@@ -318,6 +444,9 @@ def get_est(project, collection_id, publication_id, language):
 @cross_origin()
 def get_facsimiles(project, publication_id):
     published_collections = get_published_collections(project)
+    # None means that the given project value was wrong
+    if published_collections is None:
+        abort(404)
     if published_collections != []:
         facsimile_data = queries.get_facsimile_data(publication_id, published_collections)
         response = jsonify(facsimile_data)
@@ -333,6 +462,9 @@ def get_facsimiles(project, publication_id):
 @cross_origin()
 def get_collections(project, language):
     published_collections = get_published_collections(project)
+    # None means that the given project value was wrong
+    if published_collections is None:
+        abort(404)
     if published_collections != []:
         collections_data = queries.get_collections_data(project, language, published_collections)
         response = jsonify(collections_data)
@@ -348,6 +480,9 @@ def get_collections(project, language):
 @cross_origin()
 def get_metadata(project, publication_id, language):
     published_collections = get_published_collections(project)
+    # None means that the given project value was wrong
+    if published_collections is None:
+        abort(404)
     if published_collections != []:
         metadata = queries.get_publication_metadata(publication_id, language, published_collections)
         if metadata != []:
@@ -359,6 +494,7 @@ def get_metadata(project, publication_id, language):
             # for the other keys
             data = {
                 "id": publication_id,
+                "manuscript_id": None,
                 "publication_title": None,
                 "publication_subtitle": None,
                 "published_by": None,
@@ -378,6 +514,9 @@ def get_metadata(project, publication_id, language):
             recipients = set()
             translators = set()
             for row in metadata:
+                manuscript_id = row.get("manuscript_id")
+                if manuscript_id is not None and data["manuscript_id"] is None:
+                    data["manuscript_id"] = manuscript_id
                 publication_title = row.get("publication_title")
                 if publication_title is not None and data["publication_title"] is None:
                     data["publication_title"] = publication_title
@@ -580,6 +719,9 @@ def handle_archive_info(archive_info, language):
 @app.route("/api/<project>/subject/<subject_id>/<language>")
 @cross_origin()
 def get_subject(project, subject_id, language):
+    # the given project value has to be right
+    if project != "leomechelin":
+        abort(404)
     subject_data = queries.get_subject_data(project, subject_id, language)
     if subject_data is None:
         result = {}
@@ -594,6 +736,9 @@ def get_subject(project, subject_id, language):
 @app.route("/api/<project>/persons/<language>")
 @cross_origin()
 def get_persons(project, language):
+    # the given project value has to be right
+    if project != "leomechelin":
+        abort(404)
     persons = queries.get_persons_data(project, language)
     result = []
     for person in persons:
@@ -720,6 +865,9 @@ def get_introduction(project, collection_id, publication_id, language):
     # checking the published status for the collection is enough
     # since publication id is irrelevant in the case of introductions
     published_collections = get_published_collections(project)
+    # None means that the given project value was wrong
+    if published_collections is None:
+        abort(404)
     if published_collections != [] and int(collection_id) in published_collections:
         file_path = queries.get_intro_file_path(collection_id, language)
         content = transform(file_path, language)
@@ -742,9 +890,12 @@ def get_introduction(project, collection_id, publication_id, language):
 @app.route("/api/<project>/text/<collection_id>/<publication_id>/tit/<language>")
 @cross_origin()
 def get_title(project, collection_id, publication_id, language):
-    published_collections = get_published_collections(project)
     # checking the published status for the collection is enough
     # since publication id is irrelevant in the case of title pages
+    published_collections = get_published_collections(project)
+    # None means that the given project value was wrong
+    if published_collections is None:
+        abort(404)
     if published_collections != [] and int(collection_id) in published_collections:
         file_path = queries.get_title_file_path(collection_id, language)
         content = transform(file_path, language)
@@ -767,8 +918,11 @@ def get_title(project, collection_id, publication_id, language):
 @app.route("/api/<project>/urn/<url>/")
 @cross_origin()
 def get_urn_and_reference(project, url):
+    # the given project value has to be right
+    if project != "leomechelin":
+        abort(404)
     url = unquote(unquote(url))
-    urn_and_reference_data = queries.get_urn_data(project, url)
+    urn_and_reference_data = queries.get_urn_data(url)
     if urn_and_reference_data is None or urn_and_reference_data == []:
         empty_data = []
         response = jsonify(empty_data)
@@ -781,8 +935,11 @@ def get_urn_and_reference(project, url):
 @cross_origin()
 def get_collection(project, collection_id, language):
     published_collections = get_published_collections(project)
+    # None means that the given project value was wrong
+    if published_collections is None:
+        abort(404)
     if published_collections != [] and int(collection_id) in published_collections:
-        collection_data = queries.get_collection_data(project, collection_id, language)
+        collection_data = queries.get_collection_data(collection_id, language)
         response = [dict(collection_data)]
         return jsonify(response), 200
     else:
@@ -792,11 +949,187 @@ def get_collection(project, collection_id, language):
         }
         return jsonify([response_data]), 403
 
+# endpoint for all publications of a collection
+@app.route("/api/<project>/collection/<collection_id>/publications/<language>")
+@cross_origin()
+def get_publications_for_collection(project, collection_id, language):
+    published_collections = get_published_collections(project)
+    # None means that the given project value was wrong
+    if published_collections is None:
+        abort(404)
+    if published_collections != [] and int(collection_id) in published_collections:
+        publications_data = queries.get_publications_data(collection_id, language)
+        publication_data = {
+            "publication_id": None,
+            "publication_group_id": None,
+            "publication_title": None,
+            "publication_subtitle": None,
+            "published_by": None,
+            "document_type": None,
+            "original_language": None,
+            "publication_date": None,
+            "archive_info": None
+        }
+        for publication in publications_data:
+            publication_id = publication.get("publication_id")
+            publication_data["publication_id"] = publication_id
+            publication_title = publication.get("publication_title")
+            if publication_title is not None:
+                publication_data["publication_title"] = publication_title
+            publication_subtitle = publication.get("publication_subtitle")
+            if publication_subtitle is not None:
+                publication_data["publication_subtitle"] = publication_subtitle
+            published_by = publication.get("published_by")
+            if published_by is not None:
+                publication_data["published_by"] = published_by
+            document_type = publication.get("document_type")
+            if document_type is not None:
+                if language == "sv":
+                    publication_data["document_type"] = document_type
+                if language == "fi":
+                    # the value may contain more than one document type, as a string
+                    # each value has to be translated since values are in sv in the db
+                    document_types = document_type.split(", ")
+                    translated_document_types = []
+                    for doc_type in document_types:
+                        document_types_fi = get_document_types_fi_dict()
+                        if doc_type in document_types_fi.keys():
+                            translated_document_types.append(document_types_fi[doc_type])
+                        else:
+                            translated_document_types.append(document_types_fi["XX"])
+                    publication_data["document_type"] = ", ".join(translated_document_types)
+            original_language = publication.get("original_language")
+            if original_language is not None:
+                publication_data["original_language"] = original_language
+            publication_date = publication.get("publication_date")
+            if publication_date is not None:
+                publication["publication_date"] = publication_date
+            archive_info = publication.get("archive_info")
+            if archive_info is not None:
+                archive_info = handle_archive_info(archive_info, language)
+                publication["archive_info"] = archive_info
+            response = jsonify(publications_data)
+        return response, 200
+    else:
+        message = "Content is not yet published."
+        response_data = {
+            "error": message
+        }
+        return jsonify([response_data]), 403
+
+# endpoint for the download texts feature
+# depending on whether the publication has content or not,
+# there will be different options on the site 
+@app.route("/api/<project>/publication/<publication_id>")
+@cross_origin()
+def get_publication(project, publication_id):
+    # the given project value has to be right
+    if project != "leomechelin":
+        abort(404)
+    # if the publication is deleted, there's nothing to fetch
+    no_publication = queries.publication_deleted(publication_id)
+    if no_publication[0] == 1:
+        abort(404)
+    else:
+        collection_id = queries.find_out_collection(publication_id)[0]
+        published_collections = get_published_collections(project)
+        if published_collections != [] and int(collection_id) in published_collections:
+            languages = ["sv", "fi"]
+            data = {
+                "id": publication_id,
+                "publication_group_id": None,
+                "original_filename": {
+                    "sv": "",
+                    "fi": ""
+                },
+                "deleted": 0
+            }
+            for language in languages:
+                publication_data = queries.get_publication_data(publication_id, language)
+                if publication_data is not None:
+                    publication_group_id = publication_data[0]
+                    file = publication_data[1]
+                    if data["publication_group_id"] is None:
+                        data["publication_group_id"] = publication_group_id
+                    content = transform(file, language)
+                    if content != "":
+                        data["original_filename"][language] = "has_content"
+            response = jsonify([data])
+            return response, 200
+        else:
+            message = "Content is not yet published."
+            response_data = {
+                "error": message
+            }
+            return jsonify([response_data]), 403
+
+# endpoint for all ms:s for a publication
+@app.route("/api/<project>/text/<collection_id>/<publication_id>/list/ms")
+@cross_origin()
+def get_ms_for_publication(project, collection_id, publication_id):
+    published_collections = get_published_collections(project)
+    # None means that the given project value was wrong
+    if published_collections is None:
+        abort(404)
+    publication_published_status = queries.get_publication_published_status(collection_id, publication_id)
+    no_publication = queries.publication_deleted(publication_id)
+    # if status is None, then the given combo of collection id 
+    # and publication id doesn't exist
+    # and if the publication is deleted, there's nothing to fetch
+    if publication_published_status is None or no_publication[0] == 1:
+        abort(404)
+    if published_collections != [] and int(collection_id) in published_collections and (publication_published_status == 1 or publication_published_status == 2):
+        ms_list_data = queries.get_ms_list_data(publication_id)
+        # if the publication simply doesn't have an ms
+        # and only consists of the established/read text
+        # or if the ms has been deleted
+        empty_data = {
+            "id": "{}_{}".format(collection_id, publication_id),
+            "manuscripts": []
+        }
+        if ms_list_data is None:
+            data = empty_data
+        else:
+            pm_id = ms_list_data[0]
+            name = ms_list_data[1]
+            type = ms_list_data[2]
+            archive_info = ms_list_data[3]
+            language = ms_list_data[4]
+            file = ms_list_data[5]
+            data = {
+                "id": "{}_{}".format(collection_id, publication_id),
+                "manuscripts": [{
+                    "id": pm_id,
+                    "name": name,
+                    "language": language,
+                    "type": type,
+                    "archive_info": archive_info,
+                    "original_filename": "",
+                }]
+            }
+            content = transform_ms(file, language)
+            if content != "":
+                data["manuscripts"][0]["original_filename"] = "has_content"
+            # if there's no text content, this equals a non-existent ms
+            else:
+                data = empty_data
+        response = jsonify(data)
+        return response, 200
+    else:
+        message = "Content is not yet published."
+        return jsonify({
+            "id": "{}_{}_".format(collection_id, publication_id),
+            "error": message
+        }), 403
+
 # endpoint for the table of contents
 @app.route("/api/<project>/toc/<collection_id>/<language>")
 @cross_origin()
 def handle_toc_lang(project, collection_id, language):
     published_collections = get_published_collections(project)
+    # None means that the given project value was wrong
+    if published_collections is None:
+        abort(404)
     if published_collections != [] and int(collection_id) in published_collections:
         SOURCE_FOLDER = '.'
         file_path = safe_join(SOURCE_FOLDER, "toc", f"{collection_id}_{language}.json")

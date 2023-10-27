@@ -18,13 +18,20 @@ DATABASE = {
 db_engine = create_engine(url.URL.create(**DATABASE))
 project = os.getenv("")
 
-# find out which collections are set as externally published
-def get_collection_published_status(project):
+# find out the collection for a specific publication
+def find_out_collection(publication_id):
     connection = db_engine.connect()
-    if project == "leomechelin":
-        project_id = 1
-    select = "SELECT id, published FROM publication_collection WHERE project_id = :p_id AND deleted = 0;"
-    statement = text(select).bindparams(p_id=project_id)
+    select ="SELECT publication_collection_id FROM publication WHERE id = :p_id AND deleted = 0;"
+    statement = text(select).bindparams(p_id=publication_id)
+    result = connection.execute(statement).fetchone()
+    connection.close()
+    return result
+
+# find out which collections are set as externally published
+def get_collection_published_status():
+    connection = db_engine.connect()
+    select = "SELECT id, published FROM publication_collection WHERE deleted = 0;"
+    statement = text(select).bindparams()
     result = []
     for row in connection.execute(statement).fetchall():
         result.append(dict(row))
@@ -36,8 +43,8 @@ def get_collection_published_status(project):
 # published status
 def get_publication_published_status(collection_id, publication_id):
     connection = db_engine.connect()
-    select = "SELECT published FROM publication WHERE publication_collection_id = :pub_coll_id AND id = :pub_id;"
-    statement = text(select).bindparams(pub_coll_id=collection_id, pub_id=publication_id)
+    select = "SELECT published FROM publication WHERE publication_collection_id = :pub_coll_id AND id = :p_id;"
+    statement = text(select).bindparams(pub_coll_id=collection_id, p_id=publication_id)
     result = connection.execute(statement).fetchone()
     connection.close()
     if result is None:
@@ -45,7 +52,7 @@ def get_publication_published_status(collection_id, publication_id):
     else:
         return result["published"]
 
-# get the file path for the established text/reading text
+# get the file path for the established text/read text
 def get_est_file_path(publication_id, language):
     connection = db_engine.connect()
     select = "SELECT tt.text AS file FROM publication AS p LEFT JOIN translation_text AS tt ON tt.translation_id = p.translation_id AND tt.language = :lang AND tt.field_name = 'original_filename' WHERE p.id = :p_id AND p.deleted = 0;"
@@ -76,15 +83,13 @@ def publication_deleted(publication_id):
     return result
 
 # get data for all collections (serving the page called "content")
-def get_collections_data(project, language, published_collections):
-    if project == "leomechelin":
-        project_id = 1
+def get_collections_data(language, published_collections):
     connection = db_engine.connect()
     if language == "sv":
-        select = "SELECT id, name AS title, publication_collection_introduction_id, publication_collection_title_id, published FROM publication_collection WHERE project_id = :p_id AND id = ANY(:pub_coll) ORDER BY id;"
+        select = "SELECT id, name AS title, publication_collection_introduction_id, publication_collection_title_id, published FROM publication_collection WHERE id = ANY(:pub_coll) ORDER BY id;"
     if language == "fi":
-        select = "SELECT c.id, text AS title, publication_collection_introduction_id, publication_collection_title_id, published FROM publication_collection AS c, translation_text AS tt WHERE project_id = :p_id AND c.translation_id = tt.translation_id AND c.id = ANY(:pub_coll) ORDER BY id;"
-    statement = text(select).bindparams(p_id=project_id, pub_coll=published_collections)
+        select = "SELECT c.id, text AS title, publication_collection_introduction_id, publication_collection_title_id, published FROM publication_collection AS c, translation_text AS tt WHERE c.translation_id = tt.translation_id AND c.id = ANY(:pub_coll) ORDER BY id;"
+    statement = text(select).bindparams(pub_coll=published_collections)
     result = []
     for row in connection.execute(statement).fetchall():
         result.append(dict(row))
@@ -106,10 +111,10 @@ def get_facsimile_data(publication_id, published_collections):
 def get_intro_file_path(collection_id, language):
     connection = db_engine.connect()
     if language == "sv":
-        select = "SELECT original_filename AS file FROM publication_collection_introduction AS ci, publication_collection AS c WHERE c.id = :c_id AND c.publication_collection_introduction_id = ci.id;"
+        select = "SELECT original_filename AS file FROM publication_collection_introduction AS ci, publication_collection AS c WHERE c.id = :pub_coll_id AND c.publication_collection_introduction_id = ci.id;"
     if language == "fi":
-        select = "SELECT text AS file FROM publication_collection_introduction AS ci, publication_collection AS c, translation_text AS tt WHERE c.id = :c_id AND c.publication_collection_introduction_id = ci.id AND ci.translation_id = tt.translation_id;"
-    statement = text(select).bindparams(c_id=collection_id)
+        select = "SELECT text AS file FROM publication_collection_introduction AS ci, publication_collection AS c, translation_text AS tt WHERE c.id = :pub_coll_id AND c.publication_collection_introduction_id = ci.id AND ci.translation_id = tt.translation_id;"
+    statement = text(select).bindparams(pub_coll_id=collection_id)
     result = connection.execute(statement).fetchone()
     connection.close()
     if result is None:
@@ -121,10 +126,10 @@ def get_intro_file_path(collection_id, language):
 def get_title_file_path(collection_id, language):
     connection = db_engine.connect()
     if language == "sv":
-        select = "SELECT original_filename AS file FROM publication_collection_title AS ct, publication_collection AS c WHERE c.id = :c_id AND c.publication_collection_title_id = ct.id;"
+        select = "SELECT original_filename AS file FROM publication_collection_title AS ct, publication_collection AS c WHERE c.id = :pub_coll_id AND c.publication_collection_title_id = ct.id;"
     if language == "fi":
-        select = "SELECT text AS file FROM publication_collection_title AS ct, publication_collection AS c, translation_text AS tt WHERE c.id = :c_id AND c.publication_collection_title_id = ct.id AND ct.translation_id = tt.translation_id;"
-    statement = text(select).bindparams(c_id=collection_id)
+        select = "SELECT text AS file FROM publication_collection_title AS ct, publication_collection AS c, translation_text AS tt WHERE c.id = :pub_coll_id AND c.publication_collection_title_id = ct.id AND ct.translation_id = tt.translation_id;"
+    statement = text(select).bindparams(pub_coll_id=collection_id)
     result = connection.execute(statement).fetchone()
     connection.close()
     if result is None:
@@ -138,11 +143,13 @@ def get_publication_metadata(publication_id, language, published_collections):
     if language == "sv":
         select = """SELECT
                 MAX(p.id) AS id,
+                MAX(pm.id) AS manuscript_id,
                 MAX(p.publication_collection_id) AS publication_collection_id,
                 MAX(p.original_publication_date) AS publication_date,
                 MAX(p.genre) AS document_type,
                 MAX(p.published_by) AS published_by,
                 MAX(p.original_language) AS original_language,
+                MAX(p.archive_signum) AS publication_archive_info,
                 MAX(CASE
                     WHEN tt.language = :lang AND tt.field_name = 'name' THEN tt.text
                 END) AS publication_title,
@@ -195,6 +202,8 @@ def get_publication_metadata(publication_id, language, published_collections):
                 END AS translator
                 FROM publication AS p
                 LEFT JOIN
+                    publication_manuscript AS pm ON p.id = pm.publication_id AND pm.deleted = 0
+                LEFT JOIN
                     event_occurrence AS eo ON p.id = eo.publication_id AND eo.deleted = 0
                 LEFT JOIN
                     publication_facsimile AS f ON p.id = f.publication_id AND f.deleted = 0
@@ -217,11 +226,13 @@ def get_publication_metadata(publication_id, language, published_collections):
     if language == "fi":
         select = """SELECT
                 MAX(p.id) AS id,
+                MAX(pm.id) AS manuscript_id,
                 MAX(p.publication_collection_id) AS publication_collection_id,
                 MAX(p.original_publication_date) AS publication_date,
                 MAX(p.genre) AS document_type,
                 MAX(p.published_by) AS published_by,
                 MAX(p.original_language) AS original_language,
+                MAX(p.archive_signum) AS publication_archive_info,
                 MAX(CASE
                     WHEN tt.language = :lang AND tt.field_name = 'name' THEN tt.text
                 END) AS publication_title,
@@ -279,6 +290,8 @@ def get_publication_metadata(publication_id, language, published_collections):
                 END AS translator
                 FROM publication AS p
                 LEFT JOIN
+                    publication_manuscript AS pm ON p.id = pm.publication_id AND pm.deleted = 0
+                LEFT JOIN
                     event_occurrence AS eo ON p.id = eo.publication_id AND eo.deleted = 0
                 LEFT JOIN
                     publication_facsimile AS f ON p.id = f.publication_id AND f.deleted = 0
@@ -318,12 +331,10 @@ def get_alternative_facsimiles(publication_id):
     return result
 
 # get person data for a single person
-def get_subject_data(project, subject_id, language):
-    if project == "leomechelin":
-        project_id = 1
+def get_subject_data(subject_id, language):
     connection = db_engine.connect()
     if language == "sv":
-        select = "SELECT id, first_name, last_name, preposition, full_name, description, date_born, date_deceased, alias, previous_last_name FROM subject WHERE project_id = :p_id AND id = :s_id AND deleted = 0;"
+        select = "SELECT id, first_name, last_name, preposition, full_name, description, date_born, date_deceased, alias, previous_last_name FROM subject WHERE id = :s_id AND deleted = 0;"
     if language == "fi":
         select = """SELECT subject.id,
             MAX(CASE
@@ -346,19 +357,17 @@ def get_subject_data(project, subject_id, language):
             FROM subject
             LEFT JOIN
                 translation_text AS tt ON subject.translation_id = tt.translation_id AND tt.deleted = 0
-            WHERE project_id = :p_id AND subject.id = :s_id AND subject.deleted = 0 GROUP BY subject.id;"""
-    statement = text(select).bindparams(p_id=project_id, s_id=subject_id)
+            WHERE subject.id = :s_id AND subject.deleted = 0 GROUP BY subject.id;"""
+    statement = text(select).bindparams(s_id=subject_id)
     result = connection.execute(statement).fetchone()
     connection.close()
     return result
 
 # get person data for the whole index of persons
-def get_persons_data(project, language):
-    if project == "leomechelin":
-        project_id = 1
+def get_persons_data(language):
     connection = db_engine.connect()
     if language == "sv":
-        select = "SELECT id, first_name, last_name, preposition, full_name, description, date_born, date_deceased, alias, previous_last_name FROM subject WHERE project_id = :p_id AND deleted = 0 ORDER BY last_name;"
+        select = "SELECT id, first_name, last_name, preposition, full_name, description, date_born, date_deceased, alias, previous_last_name FROM subject WHERE deleted = 0 ORDER BY last_name;"
     if language == "fi":
         select = """SELECT subject.id,
             MAX(CASE
@@ -381,8 +390,8 @@ def get_persons_data(project, language):
             FROM subject
             LEFT JOIN
                 translation_text AS tt ON (subject.translation_id = tt.translation_id AND tt.field_name = 'full_name') OR (subject.translation_id = tt.translation_id AND tt.field_name = 'first_name') OR (subject.translation_id = tt.translation_id AND tt.field_name = 'last_name') OR (subject.translation_id = tt.translation_id AND tt.field_name = 'preposition') AND tt.deleted = 0
-            WHERE project_id = :p_id AND subject.deleted = 0 GROUP BY subject.id ORDER BY last_name;"""
-    statement = text(select).bindparams(p_id=project_id)
+            WHERE subject.deleted = 0 GROUP BY subject.id ORDER BY last_name;"""
+    statement = text(select).bindparams()
     result = []
     result = connection.execute(statement).fetchall()
     connection.close()
@@ -390,28 +399,71 @@ def get_persons_data(project, language):
 
 # get the reference text and a possible urn/permanent identifier
 # for the publication
-def get_urn_data(project, url):
-    if project == "leomechelin":
-        project_id = 1
+def get_urn_data(url):
     url_without_pub_id = re.sub(r"\d*$|\d*/$", "", url)
     connection = db_engine.connect()
-    select = "SELECT id, urn, url, reference_text FROM urn_lookup WHERE url = :url AND project_id = :p_id AND deleted = 0;"
-    statement = text(select).bindparams(url=url_without_pub_id, p_id=project_id)
+    select = "SELECT id, urn, url, reference_text FROM urn_lookup WHERE url = :url AND deleted = 0;"
+    statement = text(select).bindparams(url=url_without_pub_id)
     result = connection.execute(statement).fetchone()
     connection.close()
     return result
 
 # get collection data for the text download
 # for the collection
-def get_collection_data(project, collection_id, language):
-    if project == "leomechelin":
-        project_id = 1
+def get_collection_data(collection_id, language):
     connection = db_engine.connect()
     if language == "sv":
-        select = "SELECT id, name, publication_collection_introduction_id, publication_collection_title_id, published FROM publication_collection WHERE project_id = :p_id AND id = :c_id;"
+        select = "SELECT id, name, publication_collection_introduction_id, publication_collection_title_id, published FROM publication_collection WHERE id = :pub_coll_id;"
     if language == "fi":
-        select = "SELECT c.id, text AS name, publication_collection_introduction_id, publication_collection_title_id, published FROM publication_collection AS c, translation_text AS tt WHERE project_id = :p_id AND c.translation_id = tt.translation_id AND c.id = :c_id;"
-    statement = text(select).bindparams(p_id=project_id, c_id=collection_id)
+        select = "SELECT c.id, text AS name, publication_collection_introduction_id, publication_collection_title_id, published FROM publication_collection AS c, translation_text AS tt WHERE c.translation_id = tt.translation_id AND c.id = :pub_coll_id;"
+    statement = text(select).bindparams(pub_coll_id=collection_id)
+    result = connection.execute(statement).fetchone()
+    connection.close()
+    return result
+
+# get data for all publications of a collection
+def get_publications_data(collection_id, language):
+    connection = db_engine.connect()
+    select = """SELECT
+        p.id AS publication_id, publication_group_id,
+        CASE
+            WHEN tt.field_name = 'name' THEN tt.text
+        END AS publication_title,
+        CASE
+            WHEN tt.field_name = 'subtitle' THEN tt.text
+        END AS publication_subtitle,
+        published_by, genre AS document_type, original_language, original_publication_date AS publication_date, archive_signum AS archive_info
+        FROM publication AS p
+        LEFT JOIN
+                translation_text AS tt ON (p.translation_id = tt.translation_id AND tt.field_name = 'name') OR (p.translation_id = tt.translation_id AND tt.field_name = 'subtitle') AND tt.language = :lang AND tt.deleted = 0
+        WHERE p.deleted = 0 AND p.publication_collection_id = :pub_coll_id AND tt.language = :lang
+        ORDER BY p.id;"""
+    statement = text(select).bindparams(pub_coll_id=collection_id, lang=language)
+    result = []
+    for row in connection.execute(statement).fetchall():
+        result.append(dict(row))
+    connection.close()
+    return result
+
+# get publication data for the download texts feature
+def get_publication_data(publication_id, language):
+    connection = db_engine.connect()
+    select = """SELECT
+        publication_group_id, tt.text AS original_filename
+        FROM publication AS p
+        LEFT JOIN
+                translation_text AS tt ON p.translation_id = tt.translation_id AND tt.field_name = 'original_filename' AND tt.language = :lang AND tt.deleted = 0
+        WHERE tt.language = :lang AND p.id = :p_id"""
+    statement = text(select).bindparams(p_id=publication_id, lang=language)
+    result = connection.execute(statement).fetchone()
+    connection.close()
+    return result
+
+# get ms data for all ms:s for a publication
+def get_ms_list_data(publication_id):
+    connection = db_engine.connect()
+    select ="SELECT pm.id, pm.name, type, pm.archive_signum AS archive_info, pm.original_language AS language, pm.original_filename FROM publication AS p, publication_manuscript AS pm WHERE p.id = publication_id AND p.id = :p_id AND pm.deleted = 0;"
+    statement = text(select).bindparams(p_id=publication_id)
     result = connection.execute(statement).fetchone()
     connection.close()
     return result
