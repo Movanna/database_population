@@ -96,11 +96,11 @@ Later on, I had the need to rename lots of files and folders, because it turned 
 This script updates URL values connected to facsimiles (i.e. images units) in table publication_facsimile_collection. The National Archives updated their online digital archive services, which caused thousands of links from this project to their service to go dead. This script fixes missing URL:s and swaps the old ones into their new equivalents. The links are then displayed in the digital edition's metadata column as the archive source for the images.
 
 ## 6. Create the API endpoints
-A Flask app is used to build the website's API.
+A Flask app is used to build the website's API. The project has an internal and an external website, and the API serves them with different content. A collection of texts can thus be set to either internally or externally published, and the API has to check whether the requested content is available or not. The scripts also perform other checks: the project value has to be right, and so does the given combo of collection ID and publication ID or publication ID and manuscript ID. And the publication, manuscript or facsimile can't be deleted. There are many endpoints returning a lot of data, and the API is publicly accessible. This gives the user the possibility to create a large corpus tailored to specific needs, e.g. text language, document type, author, date, archive unit etc.
 
 ### 6. a) api_endpoints.py
 This script creates the endpoints for the API. The live API endpoints can be found at https://leomechelin.fi  + what's stated in the corresponding @app.route() decorator, where the project value is "leomechelin". Examples:
-[metadata endpoint](https://leomechelin.fi/api/leomechelin/publications/100/metadata/sv), [endpoint for downloadable txt file](https://leomechelin.fi/api/leomechelin/text/downloadable/txt/1/100/est-i18n/sv), [manuscript/transcription endpoint](https://leomechelin.fi/api/leomechelin/text/1/100/ms).
+[metadata endpoint](https://leomechelin.fi/api/leomechelin/publications/100/metadata/sv), [endpoint for downloadable txt file](https://leomechelin.fi/api/leomechelin/text/downloadable/txt/1/100/est-i18n/sv), [manuscript/transcription endpoint](https://leomechelin.fi/api/leomechelin/text/1/100/ms). The implementation of what they return is of course available on the [website](https://leomechelin.fi). For the endpoints returning different text content, the text transformation scripts can be found in my repo [transform_texts](https://github.com/Movanna/transform_texts).
 
 ### 6. b) endpoint_queries.py
 This script handles the database queries for the API endpoints.
