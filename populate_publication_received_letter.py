@@ -398,13 +398,17 @@ def construct_publication_title_name_part_from_id(person_id):
     person_sv = cursor.fetchone()
     translation_id = person_sv[3]
     if translation_id is not None:
-        fetch_query = """SELECT text FROM translation_text WHERE translation_id = %s AND field_name = %s"""
-        field_name = "full_name"
-        values_to_insert = (translation_id, field_name)
-        cursor.execute(fetch_query, values_to_insert)
-        person_fi = cursor.fetchone()
+        field_names = ["preposition", "last_name", "first_name"]
+        i = 0
+        for field_name in field_names:
+            fetch_query = """SELECT text FROM translation_text WHERE translation_id = %s AND field_name = %s"""
+            values_to_insert = (translation_id, field_names[i])
+            cursor.execute(fetch_query, values_to_insert)
+            field_names[i] = cursor.fetchone()
+            i += 1
+        person_fi = field_names[0] + field_names[1] + field_names[2]
     else:
-        person_fi = (None,)
+        person_fi = (None, None, None)
     person = person_sv + person_fi
     title_name_part_swe = construct_swe_name(person, person_id)
     title_name_part_fin = construct_fin_name(person, person_id, title_name_part_swe)
@@ -417,7 +421,7 @@ def construct_swe_name(person, person_id):
         surname = person[2]
         forename_letter = person[7]
     else:
-        (prefix, surname, forename_letter, translation_id, full_name_fi) = person
+        (prefix, surname, forename_letter, translation_id,  prefix_fi, surname_fi, forename_fi) = person
     if forename_letter and prefix and surname:
         title_name_part_swe = forename_letter + " " + prefix + " " + surname
     elif forename_letter and surname:
@@ -445,14 +449,21 @@ def construct_fin_name(person, person_id, title_name_part_swe):
             title_name_part_fin = forename_fi + " " + surname
         elif forename_fi:
             title_name_part_fin = forename_fi
-        # there are no cases with only surname_fi, so no need to check for that
+        elif surname_fi:
+            title_name_part_fin = surname_fi
         # if there are no Finnish name parts, the Swedish version is to be used
         else:
             title_name_part_fin = title_name_part_swe
     else:
-        full_name_fi = person[4]
-        if full_name_fi:
-            title_name_part_fin = full_name_fi
+        (prefix, surname, forename_letter, translation_id, prefix_fi, surname_fi, forename_fi) = person
+        if forename_fi and prefix_fi and surname_fi:
+            title_name_part_fin = forename_fi + " " + prefix_fi + " " + surname_fi
+        elif forename_fi and surname_fi:
+            title_name_part_fin = forename_fi + " " + surname_fi
+        elif forename_fi:
+            title_name_part_fin = forename_fi
+        elif surname_fi:
+            title_name_part_fin = surname_fi
         else:
             title_name_part_fin = title_name_part_swe            
     return title_name_part_fin
@@ -588,7 +599,7 @@ def create_name_part_for_file(person, person_id):
         surname = person[2]
         forename_letter = person[7]
     else:
-        (prefix, surname, forename_letter, translation_id, full_name_fi) = person     
+        (prefix, surname, forename_letter, translation_id, prefix_fi, surname_fi, forename_fi) = person     
     if forename_letter and prefix and surname:
         name_part = prefix + "_" + surname + "_" + forename_letter
     elif forename_letter and surname:
