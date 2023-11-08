@@ -167,6 +167,16 @@ def get_publication_metadata(publication_id, language, published_collections):
                     WHEN (eo.type = 'sent letter' OR eo.type = 'sent telegram') AND (ec.type = 'sent letter' OR ec.type = 'sent telegram') THEN subject.full_name
                 END AS sender,
                 CASE
+                    WHEN (eo.type = 'sent letter' OR eo.type = 'sent telegram') AND (ec.type = 'received letter' OR ec.type = 'received telegram') AND NOT EXISTS
+                        (SELECT subject_id FROM publication AS p
+                        LEFT JOIN event_occurrence AS eo ON p.id = eo.publication_id
+                        LEFT JOIN event_connection AS ec ON eo.event_id = ec.event_id
+                        WHERE (ec.type = 'sent letter' OR ec.type = 'sent telegram') AND p.id = :p_id)
+                    THEN 'Mechelin'
+                    WHEN (eo.type = 'received letter' OR eo.type = 'received telegram') AND (ec.type = 'sent letter' OR ec.type = 'sent telegram') THEN subject.last_name
+                    WHEN (eo.type = 'sent letter' OR eo.type = 'sent telegram') AND (ec.type = 'sent letter' OR ec.type = 'sent telegram') THEN subject.last_name
+                END AS sender_last_name,
+                CASE
                     WHEN (eo.type = 'received letter' OR eo.type = 'received telegram') AND (ec.type = 'sent letter' OR ec.type = 'sent telegram') AND NOT EXISTS
                         (SELECT subject_id FROM publication AS p
                         LEFT JOIN event_occurrence AS eo ON p.id = eo.publication_id
@@ -177,10 +187,25 @@ def get_publication_metadata(publication_id, language, published_collections):
                     WHEN (eo.type = 'sent letter' OR eo.type = 'sent telegram') AND (ec.type = 'received letter' OR ec.type = 'received telegram') THEN subject.full_name
                 END AS recipient,
                 CASE
+                    WHEN (eo.type = 'received letter' OR eo.type = 'received telegram') AND (ec.type = 'sent letter' OR ec.type = 'sent telegram') AND NOT EXISTS
+                        (SELECT subject_id FROM publication AS p
+                        LEFT JOIN event_occurrence AS eo ON p.id = eo.publication_id
+                        LEFT JOIN event_connection AS ec ON eo.event_id = ec.event_id
+                        WHERE (ec.type = 'received letter' OR ec.type = 'received telegram') AND p.id = :p_id)
+                    THEN 'Mechelin'
+                    WHEN (eo.type = 'received letter' OR eo.type = 'received telegram') AND (ec.type = 'received letter' OR ec.type = 'received telegram') THEN subject.last_name
+                    WHEN (eo.type = 'sent letter' OR eo.type = 'sent telegram') AND (ec.type = 'received letter' OR ec.type = 'received telegram') THEN subject.last_name
+                END AS recipient_last_name,
+                CASE
                     WHEN eo.type IS NULL THEN 'Leo Mechelin'
                     WHEN eo.type NOT LIKE '%letter%' AND eo.type NOT LIKE '%telegram%' AND subject_id = 1 THEN 'Leo Mechelin'
                     WHEN eo.type NOT LIKE '%letter%' AND eo.type NOT LIKE '%telegram%' AND subject_id != 1 THEN subject.full_name
                 END AS author,
+                CASE
+                    WHEN eo.type IS NULL THEN 'Mechelin'
+                    WHEN eo.type NOT LIKE '%letter%' AND eo.type NOT LIKE '%telegram%' AND subject_id = 1 THEN 'Mechelin'
+                    WHEN eo.type NOT LIKE '%letter%' AND eo.type NOT LIKE '%telegram%' AND subject_id != 1 THEN subject.last_name
+                END AS author_last_name,
                 MAX(CASE
 					WHEN f.priority = 1 THEN f.publication_facsimile_collection_id
 				END) AS facs_coll_id,
@@ -222,7 +247,7 @@ def get_publication_metadata(publication_id, language, published_collections):
                 WHERE
                     p.deleted = 0 AND p.id = :p_id AND p.publication_collection_id = ANY(:pub_coll)
                 GROUP BY
-                    sender, recipient, author, translated_into, translator;"""
+                    sender, sender_last_name, recipient, recipient_last_name, author, author_last_name, translated_into, translator;"""
     if language == "fi":
         select = """SELECT
                 MAX(p.id) AS id,
@@ -252,6 +277,18 @@ def get_publication_metadata(publication_id, language, published_collections):
                     WHEN (eo.type = 'sent letter' OR eo.type = 'sent telegram') AND (ec.type = 'sent letter' OR ec.type = 'sent telegram') AND subject.translation_id IS NOT NULL AND tt.field_name = 'full_name' THEN tt.text
                 END AS sender,
                 CASE
+                    WHEN (eo.type = 'sent letter' OR eo.type = 'sent telegram') AND (ec.type = 'received letter' OR ec.type = 'received telegram') AND NOT EXISTS
+                        (SELECT subject_id FROM publication AS p
+                        LEFT JOIN event_occurrence AS eo ON p.id = eo.publication_id
+                        LEFT JOIN event_connection AS ec ON eo.event_id = ec.event_id
+                        WHERE (ec.type = 'sent letter' OR ec.type = 'sent telegram') AND p.id = :p_id)
+                    THEN 'Mechelin'
+                    WHEN (eo.type = 'received letter' OR eo.type = 'received telegram') AND (ec.type = 'sent letter' OR ec.type = 'sent telegram') AND subject.translation_id IS NULL THEN subject.last_name
+                    WHEN (eo.type = 'received letter' OR eo.type = 'received telegram') AND (ec.type = 'sent letter' OR ec.type = 'sent telegram') AND subject.translation_id IS NOT NULL AND tt.field_name = 'last_name' THEN tt.text
+                    WHEN (eo.type = 'sent letter' OR eo.type = 'sent telegram') AND (ec.type = 'sent letter' OR ec.type = 'sent telegram') AND subject.translation_id IS NULL THEN subject.last_name
+                    WHEN (eo.type = 'sent letter' OR eo.type = 'sent telegram') AND (ec.type = 'sent letter' OR ec.type = 'sent telegram') AND subject.translation_id IS NOT NULL AND tt.field_name = 'last_name' THEN tt.text
+                END AS sender_last_name,
+                CASE
                     WHEN (eo.type = 'received letter' OR eo.type = 'received telegram') AND (ec.type = 'sent letter' OR ec.type = 'sent telegram') AND NOT EXISTS
                         (SELECT subject_id FROM publication AS p
                         LEFT JOIN event_occurrence AS eo ON p.id = eo.publication_id
@@ -264,11 +301,29 @@ def get_publication_metadata(publication_id, language, published_collections):
                     WHEN (eo.type = 'sent letter' OR eo.type = 'sent telegram') AND (ec.type = 'received letter' OR ec.type = 'received telegram') AND subject.translation_id IS NOT NULL AND tt.field_name = 'full_name' THEN tt.text
                 END AS recipient,
                 CASE
+                    WHEN (eo.type = 'received letter' OR eo.type = 'received telegram') AND (ec.type = 'sent letter' OR ec.type = 'sent telegram') AND NOT EXISTS
+                        (SELECT subject_id FROM publication AS p
+                        LEFT JOIN event_occurrence AS eo ON p.id = eo.publication_id
+                        LEFT JOIN event_connection AS ec ON eo.event_id = ec.event_id
+                        WHERE (ec.type = 'received letter' OR ec.type = 'received telegram') AND p.id = :p_id)
+                    THEN 'Mechelin'
+                    WHEN (eo.type = 'received letter' OR eo.type = 'received telegram') AND (ec.type = 'received letter' OR ec.type = 'received telegram') AND subject.translation_id IS NULL THEN subject.last_name
+                    WHEN (eo.type = 'received letter' OR eo.type = 'received telegram') AND (ec.type = 'received letter' OR ec.type = 'received telegram') AND subject.translation_id IS NOT NULL AND tt.field_name = 'last_name' THEN tt.text
+                    WHEN (eo.type = 'sent letter' OR eo.type = 'sent telegram') AND (ec.type = 'received letter' OR ec.type = 'received telegram') AND subject.translation_id IS NULL THEN subject.last_name
+                    WHEN (eo.type = 'sent letter' OR eo.type = 'sent telegram') AND (ec.type = 'received letter' OR ec.type = 'received telegram') AND subject.translation_id IS NOT NULL AND tt.field_name = 'last_name' THEN tt.text
+                END AS recipient_last_name,
+                CASE
                     WHEN eo.type IS NULL THEN 'Leo Mechelin'
                     WHEN eo.type NOT LIKE '%letter%' AND eo.type NOT LIKE '%telegram%' AND subject_id = 1 THEN 'Leo Mechelin'
                     WHEN eo.type NOT LIKE '%letter%' AND eo.type NOT LIKE '%telegram%' AND subject_id != 1 AND subject.translation_id IS NULL THEN subject.full_name
                     WHEN eo.type NOT LIKE '%letter%' AND eo.type NOT LIKE '%telegram%' AND subject_id != 1 AND subject.translation_id IS NOT NULL AND tt.field_name = 'full_name' THEN tt.text
                 END AS author,
+                CASE
+                    WHEN eo.type IS NULL THEN 'Mechelin'
+                    WHEN eo.type NOT LIKE '%letter%' AND eo.type NOT LIKE '%telegram%' AND subject_id = 1 THEN 'Mechelin'
+                    WHEN eo.type NOT LIKE '%letter%' AND eo.type NOT LIKE '%telegram%' AND subject_id != 1 AND subject.translation_id IS NULL THEN subject.last_name
+                    WHEN eo.type NOT LIKE '%letter%' AND eo.type NOT LIKE '%telegram%' AND subject_id != 1 AND subject.translation_id IS NOT NULL AND tt.field_name = 'last_name' THEN tt.text
+                END AS author_last_name,
                 MAX(CASE
 					WHEN f.priority = 1 THEN f.publication_facsimile_collection_id
 				END) AS facs_coll_id,
@@ -302,7 +357,7 @@ def get_publication_metadata(publication_id, language, published_collections):
                 LEFT JOIN
                     subject ON ec.subject_id = subject.id
                 LEFT JOIN
-                    translation_text AS tt ON (p.translation_id = tt.translation_id AND tt.field_name = 'name') OR (p.translation_id = tt.translation_id AND tt.field_name = 'subtitle') OR (subject.translation_id = tt.translation_id AND tt.field_name = 'full_name') AND tt.language = :lang AND tt.deleted = 0
+                    translation_text AS tt ON (p.translation_id = tt.translation_id AND tt.field_name = 'name') OR (p.translation_id = tt.translation_id AND tt.field_name = 'subtitle') OR (subject.translation_id = tt.translation_id AND tt.field_name = 'full_name') OR (subject.translation_id = tt.translation_id AND tt.field_name = 'last_name') AND tt.language = :lang AND tt.deleted = 0
                 LEFT JOIN
                     contribution ON p.id = contribution.publication_id AND contribution.deleted = 0
                 LEFT JOIN
@@ -310,7 +365,7 @@ def get_publication_metadata(publication_id, language, published_collections):
                 WHERE
                     p.deleted = 0 AND p.id = :p_id AND p.publication_collection_id = ANY(:pub_coll)
                 GROUP BY
-                    sender, recipient, author, translated_into, translator;"""
+                    sender, sender_last_name, recipient, recipient_last_name, author, author_last_name, translated_into, translator;"""
     statement = text(select).bindparams(p_id=publication_id, lang=language, pub_coll=published_collections)
     result = []
     for row in connection.execute(statement).fetchall():

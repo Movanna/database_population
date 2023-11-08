@@ -507,6 +507,12 @@ def get_metadata(project, publication_id, language):
                 "translations": [],
                 "facsimiles": []
             }
+            # lists used for sorting the author/sender/recipient-lists,
+            # which only contain full names
+            # according to the last name of the persons
+            author_last_names = []
+            sender_last_names = []
+            recipient_last_names = []
             # keep track of these, so that the same value isn't added twice
             translation_languages = set()
             authors = set()
@@ -566,17 +572,29 @@ def get_metadata(project, publication_id, language):
                 if publication_date is not None and data["publication_date"] is None:
                     data["publication_date"] = publication_date
                 author = row.get("author")
+                author_last_name = row.get("author_last_name")
                 if author is not None and author not in authors:
                     data["author"].append(author)
                     authors.add(author)
+                    if author_last_name is None:
+                        author_last_name = ""
+                    author_last_names.append(author_last_name)
                 sender = row.get("sender")
+                sender_last_name = row.get("sender_last_name")
                 if sender is not None and sender not in senders:
                     data["sender"].append(sender)
                     senders.add(sender)
+                    if sender_last_name is None:
+                        sender_last_name = ""
+                    sender_last_names.append(sender_last_name)
                 recipient = row.get("recipient")
+                recipient_last_name = row.get("recipient_last_name")
                 if recipient is not None and recipient not in recipients:
                     data["recipient"].append(recipient)
                     recipients.add(recipient)
+                    if recipient_last_name is None:
+                        recipient_last_name = ""
+                    recipient_last_names.append(recipient_last_name)
                 translated_into = row.get("translated_into")
                 if translated_into is not None:
                     if language == "sv":
@@ -633,6 +651,19 @@ def get_metadata(project, publication_id, language):
                             "external_url": row["external_url"]
                         }
                         data["facsimiles"].append(facsimile_data)
+            # sort authors/senders/recipients according to their last names,
+            # even though these lists only contain the full names
+            # the persons will be displayed by the frontend in the order of
+            # these lists, so sorting makes the result neater
+            lists_to_sort = ["author", "sender", "recipient"]
+            last_names_lists = [author_last_names, sender_last_names, recipient_last_names]
+            for index, list_name in enumerate(lists_to_sort):
+                full_names = data.get(list_name, [])
+                if len(full_names) > 1 and index < len(last_names_lists):
+                    last_names = last_names_lists[index]
+                    combined_names = list(zip(full_names, last_names))
+                    sorted_names = [name[0] for name in sorted(combined_names, key=lambda x: x[1])]
+                    data[list_name] = sorted_names
             # if this publication has more facsimiles than just the main facsimile
             # they get added here
             if alternative_facsimiles is not None:
