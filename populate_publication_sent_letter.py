@@ -87,8 +87,9 @@ def create_sent_publication(COLLECTION_ID, persons_list, sent_letters, name_dict
     for letter in sent_letters:
         published = 1
         category = letter[1]
-        # in this case (sent letters), use this spot for adding
-        # subject.id of the receiver (normally this is where you
+        # in this case (sent letters), use this spot for adding the
+        # subject.id of the receiver, if this person has been added
+        # to the db recently (normally this is where you
         # define whether this document is written by LM or not)
         # "x" signifies LM as the writer
         if letter[2] != "x":
@@ -121,10 +122,10 @@ def create_sent_publication(COLLECTION_ID, persons_list, sent_letters, name_dict
         elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
             archive_signum = old_archive_signum + ", " + new_archive_signum
         # this is material from another person's archive than Mechelin's,
-        # but still at the National Archive
+        # but still at the National Archives
         elif old_archive_signum is None and new_archive_signum is not None and archive_folder is not None:
             archive_signum = new_archive_signum + ", " + archive_folder
-        # this is material from another archive than the National Archive
+        # this is material from another archive than the National Archives
         else:
             archive_signum = archive_folder
         values_to_insert = (COLLECTION_ID, published, genre, original_publication_date, original_language, archive_signum)
@@ -134,7 +135,8 @@ def create_sent_publication(COLLECTION_ID, persons_list, sent_letters, name_dict
         # the titles are kept in a different table, translation_text
         # titles contain person info
         # titles contain the date (almost) as it has been recorded originally
-        person_legacy_id, person, title_swe, title_fin, translation_id = update_sent_publication_with_title(publication_id, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id)
+        # this function may update person_id
+        person_legacy_id, person, title_swe, title_fin, translation_id, person_id = update_sent_publication_with_title(publication_id, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id)
         # these are sent letters/telegrams, i.e. someone else than Mechelin received them
         # update_sent_publication_with_title found out who the receiver was
         # create connection between publication and receiver
@@ -230,17 +232,25 @@ def replace_date(original_date):
 # be perfect after this, so some will have to be changed later by hand
 # but hey, this is a humanist project
 def update_sent_publication_with_title(publication_id, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id):
-    # if the person's id was in the csv
-    # id for "unknown person" is 1912
-    if person_id is not None and person_id != "1912":
-        person_legacy_id = None        
-        title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part_from_id(person_id)
-    # else look for person_legacy_id in dictionary using name as key
-    elif unordered_name in name_dictionary.keys():
-        person_legacy_id = name_dictionary[unordered_name]
-        title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part(persons_list, person_legacy_id, person_id)
-    # if name isn't in dictionary and there's no id,
-    # or if id was "unknown person", then we don't know this is
+    # if the sender's id was in the csv
+    if person_id is not None and person_id.isdigit():
+        title_name_part_swe, title_name_part_fin, person, person_id, person_legacy_id = check_subject(person_id)
+    # else look for person_legacy_id in name_dictionary using name as key
+    # or, for persons recently added to the db:
+    # look for their id (which is not person_legacy_id but the real db id)
+    # in said dictionary, using name as key, and use that id for identifying them
+    # name parts for titles are constructed differently depending on what id is used
+    elif unordered_name is not None and unordered_name in name_dictionary.keys():
+        old_or_new_id = name_dictionary[unordered_name]
+        # legacy_id consists of "pe" + a number
+        if "pe" in old_or_new_id:
+            person_legacy_id = old_or_new_id
+            title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part(persons_list, person_legacy_id, person_id)
+        # db id is a number
+        else:
+            person_id = old_or_new_id
+            title_name_part_swe, title_name_part_fin, person, person_id, person_legacy_id = check_subject(person_id)
+    # if name isn't in dictionary and there's no id, we don't know this sender
     else:
         person_legacy_id = None
         person = None
@@ -284,7 +294,31 @@ def update_sent_publication_with_title(publication_id, unordered_name, persons_l
     update_query = """UPDATE publication SET translation_id = %s WHERE id = %s"""
     values_to_insert = (translation_id, publication_id)
     cursor.execute(update_query, values_to_insert)
-    return person_legacy_id, person, title_swe, title_fin, translation_id
+    return person_legacy_id, person, title_swe, title_fin, translation_id, person_id
+
+# if the id is in the csv (due to the person having been added
+# to the db very recently and therefore isn't present in the name_dictionary)
+# or if the person has been added to name_dictionary with a new id
+# and not with legacy_id (because he/she is a recent db addition)
+def check_subject(person_id):
+    # check if this person exists in the db
+    # if not: replace id with id for "unknown person"
+    # thus handling e.g. typos in subject_id:s in the csv
+    # or a test db with different values than the production db
+    fetch_query = """SELECT id FROM subject WHERE id = %s"""
+    value_to_insert = (person_id,)
+    cursor.execute(fetch_query, value_to_insert)
+    subject_exists = cursor.fetchone()
+    if subject_exists is None:
+        print("Person with id " + str(person_id) + " not in db!")
+        person_id = 1912
+        person = None
+        title_name_part_swe = "okänd"
+        title_name_part_fin = "tuntematon"
+    else:
+        title_name_part_swe, title_name_part_fin, person = construct_publication_title_name_part_from_id(person_id)
+    person_legacy_id = None
+    return title_name_part_swe, title_name_part_fin, person, person_id, person_legacy_id
 
 # use person_legacy_id to find out the right person
 def construct_publication_title_name_part(persons_list, person_legacy_id, person_id):
@@ -399,17 +433,28 @@ def create_event_and_connection(person_legacy_id, person_id, event_connection_ty
     value_to_insert = (event_type,)
     cursor.execute(insert_query, value_to_insert)
     event_id = cursor.fetchone()[0]
+    insert_query = """INSERT INTO event_connection(subject_id, event_id, type) VALUES(%s, %s, %s)"""
     if person_legacy_id:
-        insert_query = """INSERT INTO event_connection(subject_id, event_id, type) VALUES(%s, %s, %s)"""
         subject_id = name_id_dictionary[person_legacy_id]
         subject_id = int(subject_id)
-        values_to_insert = (subject_id, event_id, event_connection_type)
     elif person_id:
-        subject_id = int(person_id)
-        values_to_insert = (subject_id, event_id, event_connection_type)
+        # check if this person exists in the db
+        # if not: replace id with id for "unknown person"
+        # thus handling e.g. typos in subject_id:s in the csv
+        # or a test db with different values than the production db
+        fetch_query = """SELECT id FROM subject WHERE id = %s"""
+        value_to_insert = (person_id,)
+        cursor.execute(fetch_query, value_to_insert)
+        subject_exists = cursor.fetchone()
+        if subject_exists is None:
+            print("Person with id " + str(person_id) + " not in db!")
+            subject_id = 1912
+        else:
+            subject_id = int(person_id)
     else:
-        insert_query = """INSERT INTO event_connection(event_id, type) VALUES(%s, %s)"""
-        values_to_insert = (event_id, event_connection_type)
+        # id for "unknown person"
+        subject_id = 1912
+    values_to_insert = (subject_id, event_id, event_connection_type)
     cursor.execute(insert_query, values_to_insert)
     return event_id
 
@@ -520,6 +565,7 @@ def create_name_part_for_file(person, person_id):
     name_part = name_part.replace("í", "i")
     name_part = name_part.replace("ô", "o")
     name_part = name_part.replace("ó", "o")
+    name_part = name_part.replace("ò", "o")
     name_part = name_part.replace("æ", "ae")
     name_part = name_part.replace("œ", "oe")
     name_part = name_part.replace("ß", "ss")
