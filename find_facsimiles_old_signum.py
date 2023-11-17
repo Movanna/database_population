@@ -1,5 +1,5 @@
 # This script finds out which images belong to which document,
-# and then stores the file paths to those images.
+# and then saves the file paths to those images.
 
 # The starting point is a csv file with info about documents,
 # in this case received letters.

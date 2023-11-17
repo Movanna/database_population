@@ -22,6 +22,8 @@
 # are several values, the first one is chosen for the toc.
 
 # Sample output (JSON) at end of file.
+# The output of this script can also be inspected through the project's
+# API endpoint for toc, e.g. https://leomechelin.fi/api/leomechelin/toc/2/sv
 
 import psycopg2
 from pathlib import Path

@@ -74,7 +74,7 @@ def get_ms(project, collection_id, publication_id, ms_id=None):
     if published_collections != [] and int(collection_id) in published_collections and (publication_published_status == 1 or publication_published_status == 2):
         ms_data = queries.get_ms_data(publication_id)
         # if the publication simply doesn't have an ms
-        # and only consists of the established/read text
+        # and only consists of the reading text
         empty_data = {
             "id": "{}_{}".format(collection_id, publication_id),
             "manuscripts": []
@@ -127,7 +127,7 @@ def get_ms(project, collection_id, publication_id, ms_id=None):
             "error": message
         }), 403
 
-# endpoint for download of read texts
+# endpoint for download of reading texts
 # two downloadable formats: txt, xml
 @app.route("/api/<project>/text/downloadable/<format>/<collection_id>/<publication_id>/est-i18n/<language>")
 @cross_origin()
@@ -223,7 +223,7 @@ def get_downloadable_text_for_ms(project, format, collection_id, publication_id,
         if str(id) != str(ms_id):
             abort(404)
         # if the publication simply doesn't have an ms
-        # and only consists of the established/read text
+        # and only consists of the reading text
         if ms_data is None or deleted == 1:
             data = {
                 "id": "{}_{}_{}_ms".format(collection_id, publication_id, ms_id),
@@ -402,7 +402,7 @@ def create_bibl_data(metadata, publication_id, language, est_or_ms):
                         break
     return bibl_data
 
-# endpoint for the read text column, "est"
+# endpoint for the reading text column, "est"
 @app.route("/api/<project>/text/<collection_id>/<publication_id>/est-i18n/<language>")
 @cross_origin()
 def get_est(project, collection_id, publication_id, language):
@@ -1112,7 +1112,7 @@ def get_ms_for_publication(project, collection_id, publication_id):
     if published_collections != [] and int(collection_id) in published_collections and (publication_published_status == 1 or publication_published_status == 2):
         ms_list_data = queries.get_ms_list_data(publication_id)
         # if the publication simply doesn't have an ms
-        # and only consists of the established/read text
+        # and only consists of the reading text
         # or if the ms has been deleted
         empty_data = {
             "id": "{}_{}".format(collection_id, publication_id),

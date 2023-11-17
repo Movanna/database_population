@@ -98,7 +98,7 @@ def create_misc_publication(COLLECTION_ID, misc_publications, genre_dictionary, 
         original_language, language_for_db = register_language(language, language_dictionary)
         # register the archive signums, old and new
         # and, if present, the folder signum
-        # if the document isn't from the National Archive it only has
+        # if the document isn't from the National Archives it only has
         # what compares to a folder signum
         old_archive_signum = publication[13]
         new_archive_signum = publication[10]

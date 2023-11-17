@@ -3,12 +3,12 @@
 # translation and translation_text. It also creates all 
 # the needed XML files for each publication and
 # updates the db with the file paths.
-#
+
 # The starting point is a csv file containing info about articles,
 # which will be made into publications. This script adds more info
 # to the file: the publication id and title. They are needed later
 # when populating table facsimile_collection.
-#
+
 # Sample input and output (CSV) at end of file.
 
 import psycopg2

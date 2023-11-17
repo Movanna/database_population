@@ -4,23 +4,23 @@
 # as "Forename(s) Surname". The same person may have been recorded several
 # times in different ways. We need to get the names correctly ordered
 # so that duplicates and errors can be found.
-#
+
 # E.g. when you see "Reuter, J. N.", "Reuter, Julio" and "Reuter, Julio Nathanael"
 # next or close to each other in the output list, you can identify them as
 # the same person. This is a lot harder in the original Excel file, since you
 # won't get "J. N. Reuter" next to "Reuter, Julio".
-#
+
 # The purpose of this script is to split each name into surname and forename(s)
 # and produce an ordered list. The original version(s) of each name is/are also
 # preserved in the output list. Each entry will automatically be given an ID,
 # and after the output list has been manually corrected, that list will be used
 # for making a dictionary containing the original values and the corrsponding ID:s.
 # Thus I can later continue using the project's original Excel file for extracting
-# more info, while now being able to connect the info to the right person-ID.
+# more info, while now being able to connect the info to the right person ID.
 # E.g. info from rows containing the name "Calamnius, Fanny" and info from rows
-# containing "Fanny Aurora Calamnius" can be linked to the same person-ID using
+# containing "Fanny Aurora Calamnius" can be linked to the same person ID using
 # the dictionary.
-#
+
 # This is the first step in the process of populating table subject, which holds 
 # info about all persons relevant to the texts in this project.
 

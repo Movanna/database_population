@@ -3,10 +3,10 @@
 # by sort_persons.py.
 # If a person has a different name in Finnish,
 # connections are made to tables translation and translation_text. 
-#
+
 # The output includes two dictionaries, needed later when populating
 # table publication.
-#
+
 # Later on, the database schema was changed and translations were
 # connected slightly differently. However, the population through
 # csv was a one-off forming the backbone of  table subject,

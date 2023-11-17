@@ -3,13 +3,13 @@
 # publication_manuscript, translation, translation_text, event, event_connection,
 # event_occurrence. It also creates all the needed XML files for each
 # publication and manuscript and updates the db with the file paths.
-#
+
 # The starting point is a csv file containing info about poems,
 # which will be made into publications. This file was updated by one of the
 # find_facsimiles-scripts, and this script adds more info to the file:
 # the publication id and title. They will be needed later when populating
 # table facsimile_collection.
-#
+
 # The script also needs the name_dictionary and the name_id_dictionary
 # creted by deal_with_persons.py in order to connect publication with subject
 # (in this case a poem and its author). It also uses other dictionaries
@@ -104,7 +104,7 @@ def create_poem_publication(COLLECTION_ID, poems, genre_dictionary, language_dic
         original_language = original_language.replace("?", "")
         # register the archive signums, old and new
         # and, if present, the folder signum
-        # if the document isn't from the National Archive it only has
+        # if the document isn't from the National Archives it only has
         # what compares to a folder signum
         old_archive_signum = poem[13]
         new_archive_signum = poem[10]

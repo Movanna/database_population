@@ -83,10 +83,10 @@ def create_publication_facsimile_collection(facsimiles):
             elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
                 description = old_archive_signum + ", " + new_archive_signum
             # this is material from another person's archive than Mechelin's,
-            # but still at the National Archive
+            # but still at the National Archives
             elif old_archive_signum is None and new_archive_signum is not None and archive_folder is not None:
                 description = new_archive_signum + ", " + archive_folder
-            # this is material from another archive than the National Archive
+            # this is material from another archive than the National Archives
             else:
                 description = archive_folder
             external_url = facsimile[14]
@@ -108,10 +108,10 @@ def create_publication_facsimile_collection(facsimiles):
             elif old_archive_signum is not None and new_archive_signum is not None and archive_folder is None:
                 description = old_archive_signum + ", " + new_archive_signum
             # this is material from another person's archive than Mechelin's,
-            # but still at the National Archive
+            # but still at the National Archives
             elif old_archive_signum is None and new_archive_signum is not None and archive_folder is not None:
                 description = new_archive_signum + ", " + archive_folder
-            # this is material from another archive than the National Archive
+            # this is material from another archive than the National Archives
             else:
                 description = archive_folder
             external_url = facsimile[14]

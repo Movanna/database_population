@@ -52,7 +52,7 @@ def get_publication_published_status(collection_id, publication_id):
     else:
         return result["published"]
 
-# get the file path for the established text/read text
+# get the file path for the reading text
 def get_est_file_path(publication_id, language):
     connection = db_engine.connect()
     select = "SELECT tt.text AS file FROM publication AS p LEFT JOIN translation_text AS tt ON tt.translation_id = p.translation_id AND tt.language = :lang AND tt.field_name = 'original_filename' WHERE p.id = :p_id AND p.deleted = 0;"
