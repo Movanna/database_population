@@ -633,7 +633,7 @@ def get_metadata(project, publication_id, language):
                         facsimile_data = {
                             "facs_coll_id": facs_coll_id,
                             "priority": 1,
-                            "facsimile_title": row["publication_title"],
+                            "facsimile_title": row["facsimile_title"],
                             "archive_info": archive_info,
                             "number_of_images": row["number_of_images"],
                             "image_number_info": row["image_number_info"],
@@ -644,7 +644,7 @@ def get_metadata(project, publication_id, language):
                         facsimile_data = {
                             "facs_coll_id": facs_coll_id,
                             "priority": 1,
-                            "facsimile_title": row["publication_title"],
+                            "facsimile_title": row["facsimile_title"],
                             "archive_info": None,
                             "number_of_images": row["number_of_images"],
                             "image_number_info": row["image_number_info"],

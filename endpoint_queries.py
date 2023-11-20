@@ -210,6 +210,9 @@ def get_publication_metadata(publication_id, language, published_collections):
 					WHEN f.priority = 1 THEN f.publication_facsimile_collection_id
 				END) AS facs_coll_id,
                 MAX(CASE
+					WHEN f.priority = 1 THEN fc.title
+				END) AS facsimile_title,
+                MAX(CASE
 					WHEN f.priority = 1 THEN fc.description
 				END) AS archive_info,
                 MAX(CASE
@@ -327,6 +330,9 @@ def get_publication_metadata(publication_id, language, published_collections):
                 MAX(CASE
 					WHEN f.priority = 1 THEN f.publication_facsimile_collection_id
 				END) AS facs_coll_id,
+                MAX(CASE
+					WHEN f.priority = 1 THEN fc.title
+				END) AS facsimile_title,
                 MAX(CASE
 					WHEN f.priority = 1 THEN fc.description
 				END) AS archive_info,
