@@ -508,8 +508,10 @@ def get_metadata(project, publication_id, language):
                 "facsimiles": []
             }
             # lists used for sorting the author/sender/recipient-lists,
-            # which only contain full names
-            # according to the last name of the persons
+            # which only contain full names, according to the last name of the persons
+            # this sorting approach only works if the row/tuple contains both
+            # full_name and last_name
+            # that's already been handled by get_publication_metadata
             author_last_names = []
             sender_last_names = []
             recipient_last_names = []
@@ -628,6 +630,9 @@ def get_metadata(project, publication_id, language):
                 if data["facsimiles"] == []:
                     archive_info = row.get("archive_info")
                     facs_coll_id = row.get("facs_coll_id")
+                    facsimile_title = row.get("facsimile_title")
+                    if facsimile_title is None:
+                        facsimile_title = publication_title
                     if archive_info is not None and facs_coll_id is not None:
                         archive_info = handle_archive_info(archive_info, language)
                         facsimile_data = {
@@ -655,6 +660,9 @@ def get_metadata(project, publication_id, language):
             # even though these lists only contain the full names
             # the persons will be displayed by the frontend in the order of
             # these lists, so sorting makes the result neater
+            # this sorting approach only works if the row/tuple contains both
+            # full_name and last_name, otherwise the last_names_lists won't work
+            # this issue has been handled by get_publication_metadata
             lists_to_sort = ["author", "sender", "recipient"]
             last_names_lists = [author_last_names, sender_last_names, recipient_last_names]
             for index, list_name in enumerate(lists_to_sort):

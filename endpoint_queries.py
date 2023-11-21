@@ -150,6 +150,7 @@ def get_publication_metadata(publication_id, language, published_collections):
                 MAX(p.published_by) AS published_by,
                 MAX(p.original_language) AS original_language,
                 MAX(p.archive_signum) AS publication_archive_info,
+                subject.id AS person_id,
                 MAX(CASE
                     WHEN tt.language = :lang AND tt.field_name = 'name' THEN tt.text
                 END) AS publication_title,
@@ -210,7 +211,7 @@ def get_publication_metadata(publication_id, language, published_collections):
 					WHEN f.priority = 1 THEN f.publication_facsimile_collection_id
 				END) AS facs_coll_id,
                 MAX(CASE
-					WHEN f.priority = 1 THEN fc.title
+					WHEN f.priority = 1 AND f.type = 0 THEN fc.title
 				END) AS facsimile_title,
                 MAX(CASE
 					WHEN f.priority = 1 THEN fc.description
@@ -250,7 +251,7 @@ def get_publication_metadata(publication_id, language, published_collections):
                 WHERE
                     p.deleted = 0 AND p.id = :p_id AND p.publication_collection_id = ANY(:pub_coll)
                 GROUP BY
-                    sender, sender_last_name, recipient, recipient_last_name, author, author_last_name, translated_into, translator;"""
+                    person_id, sender, sender_last_name, recipient, recipient_last_name, author, author_last_name, translated_into, translator;"""
     if language == "fi":
         select = """SELECT
                 MAX(p.id) AS id,
@@ -261,6 +262,7 @@ def get_publication_metadata(publication_id, language, published_collections):
                 MAX(p.published_by) AS published_by,
                 MAX(p.original_language) AS original_language,
                 MAX(p.archive_signum) AS publication_archive_info,
+                subject.id AS person_id,
                 MAX(CASE
                     WHEN tt.language = :lang AND tt.field_name = 'name' THEN tt.text
                 END) AS publication_title,
@@ -331,7 +333,7 @@ def get_publication_metadata(publication_id, language, published_collections):
 					WHEN f.priority = 1 THEN f.publication_facsimile_collection_id
 				END) AS facs_coll_id,
                 MAX(CASE
-					WHEN f.priority = 1 THEN fc.title
+					WHEN f.priority = 1 AND f.type = 0 THEN fc.title
 				END) AS facsimile_title,
                 MAX(CASE
 					WHEN f.priority = 1 THEN fc.description
@@ -371,11 +373,33 @@ def get_publication_metadata(publication_id, language, published_collections):
                 WHERE
                     p.deleted = 0 AND p.id = :p_id AND p.publication_collection_id = ANY(:pub_coll)
                 GROUP BY
-                    sender, sender_last_name, recipient, recipient_last_name, author, author_last_name, translated_into, translator;"""
+                    person_id, sender, sender_last_name, recipient, recipient_last_name, author, author_last_name, translated_into, translator;"""
     statement = text(select).bindparams(p_id=publication_id, lang=language, pub_coll=published_collections)
     result = []
+    # combine tuples containing info for the same person
+    # sorting names in functions using this query result
+    # is easier if all name info is in the same tuple
+    PERSON_ID_INDEX = 8
     for row in connection.execute(statement).fetchall():
-        result.append(dict(row))
+        if row and row[PERSON_ID_INDEX] is not None:
+            person_id = row[PERSON_ID_INDEX]
+            # check if there already is an entry for this person_id
+            existing_entry_index = next((i for i, entry in enumerate(result) if entry.get("person_id") == person_id), None)
+            if existing_entry_index is not None:
+                # update the existing entry with missing information
+                existing_entry = result[existing_entry_index]
+                for key, value in row.items():
+                    if existing_entry[key] is None and value is not None:
+                        existing_entry[key] = value
+            else:
+                # create a new entry if person_id doesn't already exist in the result
+                result.append(dict(row))
+        else:
+            # if person_id is None: append the tuple anyway
+            # LM as author/sender/recipient is only registered with person_id
+            # in cases where he's the co-author etc., otherwise not
+            # and we need these tuples too as part of the result
+            result.append(dict(row))
     connection.close()
     return result
 
