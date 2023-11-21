@@ -391,6 +391,12 @@ def get_publication_metadata(publication_id, language, published_collections):
                 for key, value in row.items():
                     if existing_entry[key] is None and value is not None:
                         existing_entry[key] = value
+                    # don't lose tuples by only updating None values in existing tuples
+                    # other values may differ, and then the tuple should be appended
+                    # with its missing information updated first, and the differing
+                    # information intact
+                    elif existing_entry[key] is not None and value is not None and existing_entry[key] != value:
+                        result.append(dict(row))
             else:
                 # create a new entry if person_id doesn't already exist in the result
                 result.append(dict(row))

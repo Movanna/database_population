@@ -396,9 +396,15 @@ def create_bibl_data(metadata, publication_id, language, est_or_ms):
                     translation_languages.add(translated_into)
                 # find the translation data for the translated language
                 for translation in bibl_data["translations"]:
-                    if translation["translated_into"] == unabbreviated_translated_into and translator not in translators:
+                    # when adding translators to the set, also add the language
+                    # of the current translation
+                    # thus allowing for the same person translating into several languages
+                    translator_and_language = f"{translator}_{translated_into}"
+                    # the translator may exist in the set, but not as
+                    # translator for this language
+                    if translation["translated_into"] == unabbreviated_translated_into and translator_and_language not in translators:
                         translation["translators"].append(translator)
-                        translators.add(translator)
+                        translators.add(translator_and_language)
                         break
     return bibl_data
 
@@ -619,9 +625,15 @@ def get_metadata(project, publication_id, language):
                         translation_languages.add(translated_into)
                     # find the translation data for the translated language
                     for translation in data["translations"]:
-                        if translation["translated_into"] == unabbreviated_translated_into and translator not in translators:
+                        # when adding translators to the set, also add the language
+                        # of the current translation
+                        # thus allowing for the same person translating into several languages
+                        translator_and_language = f"{translator}_{translated_into}"
+                        # the translator may exist in the set, but not as
+                        # translator for this language
+                        if translation["translated_into"] == unabbreviated_translated_into and translator_and_language not in translators:
                             translation["translators"].append(translator)
-                            translators.add(translator)
+                            translators.add(translator_and_language)
                             break
                 # the metadata query only fetched the main facsimile,
                 # so there's just one facsimile to add here
