@@ -682,7 +682,7 @@ def get_metadata(project, publication_id, language):
                 if len(full_names) > 1 and index < len(last_names_lists):
                     last_names = last_names_lists[index]
                     combined_names = list(zip(full_names, last_names))
-                    sorted_names = [name[0] for name in sorted(combined_names, key=lambda x: x[1])]
+                    sorted_names = [name[0] for name in sorted(combined_names, key=lambda x: x[1].casefold())]
                     data[list_name] = sorted_names
             # if this publication has more facsimiles than just the main facsimile
             # they get added here
