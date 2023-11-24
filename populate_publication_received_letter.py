@@ -240,6 +240,16 @@ def replace_date(original_date):
             if match_string:
                 date = match_string.group(0)
                 date = date + "-XX-XX"
+        # for cases where original_date is e.g. "1880-talet"
+        # i.e. the 1880s: the year should be recorded as 188X
+        if not found:
+            search_string = re.compile(r"(\d{2})(\d{1})(\d{1})-tal")
+            match_string = re.search(search_string, original_date)
+            if match_string:
+                if (match_string.group(1) == "18" or match_string.group(1) == "19") and match_string.group(2) != "0":
+                    date = match_string.group(1) + match_string.group(2) + "X-XX-XX"
+                if (match_string.group(1) == "18" or match_string.group(1) == "19") and match_string.group(2) == "0":
+                    date = match_string.group(1) + "XX-XX-XX"
     if original_date == "" or original_date is None:
         date_uncertain = False
         no_date = True
