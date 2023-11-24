@@ -717,7 +717,7 @@ def get_metadata(project, publication_id, language):
                 # in the order of this list, so let's sort them according to
                 # their priority value
                 # if there's just the main facsimile, there's nothing to sort
-                data["facsimiles"] = sorted(data["facsimiles"], key=lambda x: x["priority"])
+                data["facsimiles"] = sorted(data["facsimiles"], key=lambda x: x["priority"].casefold())
     if published_collections != [] and metadata != []:
         response = jsonify(data)
         return response, 200
