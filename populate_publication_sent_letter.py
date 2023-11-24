@@ -254,6 +254,7 @@ def update_sent_publication_with_title(publication_id, unordered_name, persons_l
     else:
         person_legacy_id = None
         person = None
+        person_id = 1912
         title_name_part_swe = "okänd"
         title_name_part_fin = "tuntematon"
     # make some slight changes to original_date, if needed,
@@ -309,9 +310,10 @@ def check_subject(person_id):
     value_to_insert = (person_id,)
     cursor.execute(fetch_query, value_to_insert)
     subject_exists = cursor.fetchone()
-    if subject_exists is None:
-        print("Person with id " + str(person_id) + " not in db!")
-        person_id = 1912
+    if subject_exists is None or subject_exists[0] == 1912:
+        if subject_exists is None:
+            print("Person with id " + str(person_id) + " not in db!")
+            person_id = 1912
         person = None
         title_name_part_swe = "okänd"
         title_name_part_fin = "tuntematon"
@@ -532,6 +534,9 @@ def create_name_part_for_file(person, person_id):
         prefix = person[1]
         surname = person[2]
         forename_letter = person[7]
+    elif person_id == 1912:
+        name_part = "X_X"
+        return name_part
     else:
         (prefix, surname, forename_letter, translation_id, prefix_fi, surname_fi, forename_fi) = person 
     if forename_letter and prefix and surname:
