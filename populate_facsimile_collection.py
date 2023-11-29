@@ -84,7 +84,8 @@ def create_publication_facsimile_collection(facsimiles):
                 description = old_archive_signum + ", " + new_archive_signum
             # this is material from another person's archive than Mechelin's,
             # but still at the National Archives
-            elif old_archive_signum is None and new_archive_signum is not None and archive_folder is not None:
+            # (if new_archive_signum ends with ".pdf", it's not from the National Archives)
+            elif old_archive_signum is None and new_archive_signum is not None and not new_archive_signum.endswith(".pdf") and archive_folder is not None:
                 description = new_archive_signum + ", " + archive_folder
             # this is material from another archive than the National Archives
             else:
@@ -109,7 +110,8 @@ def create_publication_facsimile_collection(facsimiles):
                 description = old_archive_signum + ", " + new_archive_signum
             # this is material from another person's archive than Mechelin's,
             # but still at the National Archives
-            elif old_archive_signum is None and new_archive_signum is not None and archive_folder is not None:
+            # (if new_archive_signum ends with ".pdf", it's not from the National Archives)
+            elif old_archive_signum is None and new_archive_signum is not None and not new_archive_signum.endswith(".pdf") and archive_folder is not None:
                 description = new_archive_signum + ", " + archive_folder
             # this is material from another archive than the National Archives
             else:
@@ -128,9 +130,18 @@ def create_publication_facsimile_collection(facsimiles):
         # number_of_pages in db means number of images
         number_of_pages = last_image - first_image + 1
         if first_image == last_image:
-            page_comment = str(first_image)
+            # include new_archive_signum if it comes from an archive
+            # using a separate pdf as the facsimile for each publication, 
+            # since normal image numbering isn't descriptive enough in that case
+            if new_archive_signum.endswith(".pdf"):
+                page_comment = new_archive_signum + ", " + str(first_image)
+            else:
+                page_comment = str(first_image)
         else:
-            page_comment = str(first_image) + "–" + str(last_image)
+            if new_archive_signum.endswith(".pdf"):
+                page_comment = new_archive_signum + ", " + str(first_image) + "–" + str(last_image)
+            else:
+                page_comment = str(first_image) + "–" + str(last_image)
         values_to_insert = (title, number_of_pages, start_page_number, description, folder_path, page_comment, external_url)
         cursor.execute(insert_query, values_to_insert)
         facs_coll_id = cursor.fetchone()[0]

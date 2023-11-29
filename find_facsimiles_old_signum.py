@@ -85,13 +85,13 @@ def find_first_signum(info_list):
         # it can also have been recorded as e.g. "2+4",
         # meaning 2 pages + a separate version with 4 pages
         # get the first number
-        number_of_pages = row.pop(9)
+        number_of_pages = row[9]
         match_string = re.match(r"\d+", number_of_pages)
         if match_string is None or number_of_pages == "":
-            row.insert(9, 0)
+            row[9] = 0
         else:
             number_of_pages = int(match_string.group())
-            row.insert(9, number_of_pages)
+            row[9] = number_of_pages
         # look for signums in the url
         search_string = re.compile(r"aytun=(\d{7}\.KA)&j=(\d+)")
         match_string = re.search(search_string, url)
@@ -105,13 +105,8 @@ def find_first_signum(info_list):
             folder_signum = match_string.group(1)
             first_image = match_string.group(2)
             first_image_signum = first_image.zfill(4)
-            # remove this empty slot in the list, placeholder for
-            # (old) folder signum
-            row.pop(13)
-            row.insert(13, folder_signum)
-            # placeholder for first image signum
-            row.pop(11)
-            row.insert(11, first_image_signum)
+            row[13] = folder_signum
+            row[11] = first_image_signum
             row.append(first_image)
     # get rid of empty lists
     info_list = [row for row in info_list if row != []]
@@ -214,9 +209,7 @@ def find_last_signum(extended_info_list, file_list):
         last_image_signum, match_list = find_image_paths(folder_signum, first_image, first_image_signum, last_image, last_image_signum, file_list)
         # first_image value is no longer needed
         row.pop(18)
-        # placeholder for last image signum
-        row.pop(12)
-        row.insert(12, last_image_signum)
+        row[12] = last_image_signum
         row.extend([match_list])
         result_list.append(row)
         i += 1
@@ -233,9 +226,7 @@ def find_last_signum(extended_info_list, file_list):
         last_image_signum, match_list = find_image_paths(folder_signum, first_image, first_image_signum, last_image, last_image_signum, file_list)
         # first_image value is no longer needed
         row.pop(18)
-        # placeholder for last image signum
-        row.pop(12)
-        row.insert(12, last_image_signum)
+        row[12] = last_image_signum
         row.extend([match_list])
         result_list.append(row)
     return result_list
@@ -305,9 +296,7 @@ def find_new_folder_signum(result_list, signum_dictionary):
             new_signum = signum_dictionary[old_folder_signum]
         else:
             new_signum = ""
-        # placeholder for new folder signum
-        row.pop(10)
-        row.insert(10, new_signum)
+        row[10] = new_signum
     return result_list
 
 def main():

@@ -123,7 +123,8 @@ def create_sent_publication(COLLECTION_ID, persons_list, sent_letters, name_dict
             archive_signum = old_archive_signum + ", " + new_archive_signum
         # this is material from another person's archive than Mechelin's,
         # but still at the National Archives
-        elif old_archive_signum is None and new_archive_signum is not None and archive_folder is not None:
+        # (if new_archive_signum ends with ".pdf", it's not from the National Archives)
+        elif old_archive_signum is None and new_archive_signum is not None and not new_archive_signum.endswith(".pdf") and archive_folder is not None:
             archive_signum = new_archive_signum + ", " + archive_folder
         # this is material from another archive than the National Archives
         else:

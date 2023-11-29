@@ -114,8 +114,8 @@ def find_signums(info_list, file_list, signum_dictionary):
     # the folder signum and the image signum
     # add the found signums to each list in the info_list
     for row in info_list:
-        # look for folder and image signums
-        whole_first_signum = row.pop(11)
+        # look for combined folder and image signum
+        whole_first_signum = row[11]
         search_string = re.compile(r"(\d{10})_(\d{4})")
         match_string = re.search(search_string, whole_first_signum)
         # if no signum is found we can't find the facsimile with this script
@@ -125,22 +125,20 @@ def find_signums(info_list, file_list, signum_dictionary):
             print(row)
             row.clear()
             continue
-        # remove this empty slot in the list, placeholder for folder signum
-        row.pop(10)
         # add the newly found signums to list
         folder_signum = match_string.group(1)
         first_image_signum = match_string.group(2)  
-        row.insert(10, folder_signum)
-        row.insert(11, first_image_signum)
+        row[10] = folder_signum
+        row[11] = first_image_signum
         # look for a second signum and split it, if found
-        whole_last_signum = row.pop(12)
+        whole_last_signum = row[12]
         match_string = re.search(search_string, whole_last_signum)
         # if no second signum was found, then the facsimile is just one image
         if match_string is None:
             last_image_signum = first_image_signum
         else:
             last_image_signum = match_string.group(2)
-        row.insert(12, last_image_signum)
+        row[12] = last_image_signum
         # check for a version signum; if there are alternative images,
         # we need to add a second facsimile for this publication
         if row[15] != "":
@@ -162,9 +160,7 @@ def find_signums(info_list, file_list, signum_dictionary):
         if match_list_2 != "":
             row.extend([match_list_2])            
         old_folder_signum = find_old_folder_signum(folder_signum, signum_dictionary)
-        # placeholder for old folder signum
-        row.pop(13)
-        row.insert(13, old_folder_signum)
+        row[13] = old_folder_signum
         print(row)
     # get rid of empty lists
     result_list = [row for row in info_list if row != []]
