@@ -98,6 +98,9 @@ Later on, I had the need to rename lots of files and folders, because it turned 
 ### 5. h) update_archive_links.py
 This script updates URL values connected to facsimiles (i.e. images units) in table publication_facsimile_collection. The National Archives updated their online digital archive services, which caused thousands of links from this project to their service to go dead. This script fixes missing URL:s and swaps the old ones into their new equivalents. The links are then displayed in the digital edition's metadata column as the archive source for the images.
 
+### 5. i) convert_tif_to_jpg.py
+This script converts a TIFF to one or more JPEG files. A TIFF may contain several frames/pages, and rather than one TIFF such as 001.tif with multiple pages, I needed all of its frames as individual JPEG:s in a folder named after the TIFF: 001/001.jpg, 001/002.jpg etc.
+
 ## 6. Create the API endpoints
 A Flask app is used to build the website's API. The project has an internal and an external website, and the API serves them with different content. A collection of texts can thus be set to either internally or externally published, and the API has to check whether the requested content is available or not. The scripts also perform other checks: the project value has to be right, and so does the given combo of collection ID and publication ID or publication ID and manuscript ID. And the requested publication, manuscript or facsimile can't be a deleted one. There are many endpoints returning a lot of data, and the API is publicly accessible. This gives the user the possibility to create a large corpus tailored to specific needs, e.g. text language, text format, document type, author, date, archive unit etc.
 
