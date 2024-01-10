@@ -113,11 +113,8 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
         original_date = letter[0]
         original_publication_date, no_date, date_uncertain = replace_date(original_date)
         language = letter[7]
-        # csv is in Finnish, but db has Swedish values for this
-        if language in language_dictionary.keys():
-            original_language = language_dictionary[language]
-        else:
-            original_language = "xx"
+        # register the language(s)
+        original_language, language_for_db = register_language(language, language_dictionary)
         unordered_name = letter[4]
         # register the archive signums, old and new
         # and the archive folder, if present
@@ -137,7 +134,7 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
         # this is material from another archive than the National Archives
         else:
             archive_signum = archive_folder
-        values_to_insert = (COLLECTION_ID, published, genre, original_publication_date, original_language, archive_signum)
+        values_to_insert = (COLLECTION_ID, published, genre, original_publication_date, language_for_db, archive_signum)
         cursor.execute(insert_query, values_to_insert)
         publication_id = cursor.fetchone()[0]
         # the title of the publication is in swe and fin
@@ -145,7 +142,7 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
         # titles contain person info
         # titles contain the date (almost) as it has been recorded originally
         # this function may update person_id
-        person_legacy_id, person, title_swe, title_fin, translation_id, receiver, receiver_legacy_id, person_id = update_received_publication_with_title(publication_id, category, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id)
+        person_legacy_id, person, title_swe, title_fin, translation_id, receiver, receiver_legacy_id, person_id, receiver_id = update_received_publication_with_title(publication_id, category, unordered_name, persons_list, name_dictionary, original_date, no_date, date_uncertain, person_id)
         # these are received letters/telegrams, i.e. someone else than Mechelin sent them
         # update_publication_with_title found out who the sender was
         # create connection between publication and sender
@@ -159,7 +156,6 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
         # if there's a receiver who isn't LM:
         # create another connection, now between publication and receiver
         if receiver is not None:
-            receiver_id = None
             if genre == "mottaget telegram":
                 event_connection_type = "received telegram"
             else:
@@ -174,7 +170,7 @@ def create_received_publication(COLLECTION_ID, persons_list, received_letters, n
         create_event_occurrence(publication_id, event_id, event_occurrence_type)
         # since these publications are manuscripts, populate table publication_manuscript
         manuscript_type = 1
-        manuscript_id = create_publication_manuscript(publication_id, published, manuscript_type, archive_signum, original_language, title_swe)
+        manuscript_id = create_publication_manuscript(publication_id, published, manuscript_type, archive_signum, language_for_db, title_swe)
         # each publication has two XML files, a Swedish and a Finnish one
         # if original_language is something else, then a third file will be created
         # these files contain a template and the editors will fill them with content
@@ -255,6 +251,26 @@ def replace_date(original_date):
         no_date = True
     return date, no_date, date_uncertain
 
+# there can be several languages for one publication
+# meaning that the text e.g. can start off in Swedish
+# and then continue in French
+# all languages for a publication are recorded in the db
+def register_language(language, language_dictionary):
+    original_language = []
+    if language is None:
+        original_language.append("xx")
+    else:
+        languages = language.split(", ")
+        for language in languages:
+            if language in language_dictionary.keys():
+                language = language_dictionary[language]
+                original_language.append(language)
+            else:
+                original_language.append("xx")
+    language_for_db = ", "
+    language_for_db = language_for_db.join(original_language)
+    return original_language, language_for_db
+
 # create the titles for the publication
 # it's a recieved letter, so the title consists of date, sender and receiver
 # there's a swe and a fin title
@@ -274,14 +290,14 @@ def update_received_publication_with_title(publication_id, category, unordered_n
         receiver = names[1]
     # this means that LM is the receiver, but he's not registered
     # in the db, since this is the default case
-    # the variables below refer to cases with another receiver than LM
     else:
         receiver = None
         receiver_legacy_id = None
+        receiver_id = None
     # if the sender's id was in the csv
     if person_id is not None and person_id.isdigit():
         title_name_part_swe, title_name_part_fin, person, person_id, person_legacy_id = check_subject(person_id)
-    # else look for person_legacy_id in name_dictionary using name as key
+    # else look for the sender's person_legacy_id in name_dictionary using name as key
     # or, for persons recently added to the db:
     # look for their id (which is not person_legacy_id but the real db id)
     # in said dictionary, using name as key, and use that id for identifying them
@@ -307,9 +323,14 @@ def update_received_publication_with_title(publication_id, category, unordered_n
     # if this letter has a receiver which is not LM:
     # get the receiver's identity
     if receiver is not None and receiver in name_dictionary.keys():
-        receiver_id = None
-        receiver_legacy_id = name_dictionary[receiver]
-        receiver_name_part_swe, receiver_name_part_fin, receiver_person = construct_publication_title_name_part(persons_list, receiver_legacy_id, receiver_id)
+        old_or_new_id = name_dictionary[receiver]
+        if "pe" in old_or_new_id:
+            receiver_id = None
+            receiver_legacy_id = old_or_new_id
+            receiver_name_part_swe, receiver_name_part_fin, receiver_person = construct_publication_title_name_part(persons_list, receiver_legacy_id, receiver_id)
+        else:
+            receiver_id = old_or_new_id
+            receiver_name_part_swe, receiver_name_part_fin, receiver_person, receiver_id, receiver_legacy_id = check_subject(receiver_id)
     else:
         receiver_id = None
         receiver_legacy_id = None
@@ -364,7 +385,7 @@ def update_received_publication_with_title(publication_id, category, unordered_n
     update_query = """UPDATE publication SET translation_id = %s WHERE id = %s"""
     values_to_insert = (translation_id, publication_id)
     cursor.execute(update_query, values_to_insert)
-    return person_legacy_id, person, title_swe, title_fin, translation_id, receiver, receiver_legacy_id, person_id
+    return person_legacy_id, person, title_swe, title_fin, translation_id, receiver, receiver_legacy_id, person_id, receiver_id
 
 # if the id is in the csv (due to the person having been added
 # to the db very recently and therefore isn't present in the name_dictionary)
@@ -543,9 +564,9 @@ def create_event_occurrence(publication_id, event_id, event_occurrence_type):
     cursor.execute(insert_query, values_to_insert)
 
 # populate table publication_manuscript
-def create_publication_manuscript(publication_id, published, manuscript_type, archive_signum, original_language, title_swe):
+def create_publication_manuscript(publication_id, published, manuscript_type, archive_signum, language_for_db, title_swe):
     insert_query = """INSERT INTO publication_manuscript(publication_id, published, name, type, archive_signum, original_language) VALUES(%s, %s, %s, %s, %s, %s) RETURNING id"""
-    values_to_insert = (publication_id, published, title_swe, manuscript_type, archive_signum, original_language)
+    values_to_insert = (publication_id, published, title_swe, manuscript_type, archive_signum, language_for_db)
     cursor.execute(insert_query, values_to_insert)
     manuscript_id = cursor.fetchone()[0]
     return manuscript_id
@@ -574,10 +595,12 @@ def create_file(directory_path, person, person_id, original_publication_date, or
     person_directory_path = create_directory(directory)
     final_directory = person_directory_path + "/" + original_publication_date + "_" + name_part
     final_directory_path = create_directory(final_directory)
-    # if the language is Swedish, then there will be two files/file paths
-    # for the publication, and the Swedish file is also manuscript file
-    if original_language == "sv":
-        file_name = original_publication_date + "_" + name_part + "_" + original_language + "_" + str(publication_id) + ".xml"
+    # if the original language is just Swedish or Finnish:
+    # there will be two files/file paths for the publication
+    # if the publication is a manuscript, the Swedish/Finnish file
+    # will be manuscript file
+    if original_language[0] == "sv" or original_language[0] == "fi":
+        file_name = original_publication_date + "_" + name_part + "_sv_" + str(publication_id) + ".xml"
         file_path_swe = final_directory_path + "/" + file_name
         write_to_file(file_path_swe, title_swe)
         file_name = original_publication_date + "_" + name_part + "_fi_" + str(publication_id) + ".xml"
@@ -585,11 +608,17 @@ def create_file(directory_path, person, person_id, original_publication_date, or
         write_to_file(file_path_fin, title_fin)
         add_file_path(translation_id, file_path_swe, file_path_fin)
         # update publication_manuscript too
-        update_publication_manuscript_with_file_path(file_path_swe, manuscript_id)
-    # if the language is foreign, then there will be two files/file paths
-    # for the publication, and a foreign manuscript file
+        if manuscript_id is not None and original_language[0] == "sv":
+            update_publication_manuscript_with_file_path(file_path_swe, manuscript_id)
+        if manuscript_id is not None and original_language[0] == "fi":
+            update_publication_manuscript_with_file_path(file_path_fin, manuscript_id)
+    # if the language is foreign:
+    # there will be three files/file paths for the publication
+    # the foreign file will be manuscript file
+    # in the csv, if the publication is partly in a foreign language,
+    # this has to be the first language in the string containing the languages
     else:
-        file_name = original_publication_date + "_" + name_part + "_" + original_language + "_" + str(publication_id) + ".xml"
+        file_name = original_publication_date + "_" + name_part + "_" + original_language[0] + "_" + str(publication_id) + ".xml"
         file_path_orig = final_directory_path + "/" + file_name
         write_to_file(file_path_orig, title_swe)
         file_name = original_publication_date + "_" + name_part + "_sv_" + str(publication_id) + ".xml"
@@ -644,6 +673,7 @@ def create_name_part_for_file(person, person_id):
     name_part = name_part.replace("Ü", "U")
     name_part = name_part.replace("ï", "i")
     name_part = name_part.replace("í", "i")
+    name_part = name_part.replace("ł", "l")
     name_part = name_part.replace("ô", "o")
     name_part = name_part.replace("ó", "o")
     name_part = name_part.replace("ò", "o")

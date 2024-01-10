@@ -408,6 +408,8 @@ def create_file(directory_path, genre, original_publication_date, original_langu
     # if the language is foreign:
     # there will be three files/file paths for the publication
     # the foreign file will be manuscript file
+    # in the csv, if the publication is partly in a foreign language,
+    # this has to be the first language in the string containing the languages
     else:
         file_name = original_publication_date + "_" + title_part + "_" + original_language + "_" + str(publication_id) + ".xml"
         file_path_orig = final_directory_path + "/" + file_name
@@ -451,6 +453,7 @@ def create_title_part_for_file(original_title):
     title_part = title_part.replace("Ü", "U")
     title_part = title_part.replace("ï", "i")
     title_part = title_part.replace("í", "i")
+    title_part = title_part.replace("ł", "l")
     title_part = title_part.replace("ñ", "n")
     title_part = title_part.replace("ô", "o")
     title_part = title_part.replace("ó", "o")
