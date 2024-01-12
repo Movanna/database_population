@@ -775,10 +775,12 @@ def get_subject(project, subject_id, language):
         abort(404)
     subject_data = queries.get_subject_data(project, subject_id, language)
     if subject_data is None:
-        result = {}
+        abort(404)
     else:
         result = []
-        data_result = contruct_person_data(subject_data, language, result)
+        data_result = construct_person_data(subject_data, language, result)
+        if result == []:
+            abort(404)
         result = dict(data_result[0])
     response = jsonify(result)
     return response, 200
@@ -794,16 +796,18 @@ def get_persons(project, language):
     result = []
     for person in persons:
         try:
-            result = contruct_person_data(person, language, result)
+            result = construct_person_data(person, language, result)
         except:
             continue
     # the endpoint provides the whole person index at once
     # already sorted alphabetically
-    result.sort(key=lambda x: x["sort_by"])
+    if result == []:
+        abort(404)
+    result.sort(key=lambda x: x["sort_by"].casefold())
     response = jsonify(result)
     return response, 200
 
-def contruct_person_data(person, language, result):
+def construct_person_data(person, language, result):
     id = person[0]
     first_name = person[1]
     last_name = person[2]
@@ -814,6 +818,17 @@ def contruct_person_data(person, language, result):
     date_deceased = person[7]
     alias = person[8]
     previous_last_name = person[9]
+    # check if the name values in the tuple are NULL
+    # it is possible for editors to add such tuples
+    # but those shouldn't be part of the result
+    # a person needs at least a full_name
+    # preferably, there should always be either a last_name or a first_name too
+    if all(value is None for value in [first_name, last_name, full_name]):
+        # if all name values are None: skip this tuple
+        return result
+    if full_name is None:
+        # if full_name is None: skip this tuple
+        return result
     data = {}
     data["id"] = id
     data["first_name"] = first_name
@@ -842,7 +857,10 @@ def contruct_person_data(person, language, result):
         elif preposition is None and last_name is not None and first_name is None:
             data["name_for_list"] = last_name
         else:
-            data["name_for_list"] = first_name
+            if first_name is None and full_name is not None:
+                data["name_for_list"] = full_name
+            else:
+                data["name_for_list"] = first_name
     if language == "fi":
         if preposition is not None and last_name is not None and first_name is not None:
             data["name_for_list"] = last_name + ", " + first_name + " " + preposition 
@@ -853,13 +871,19 @@ def contruct_person_data(person, language, result):
         elif preposition is None and last_name is not None and first_name is None:
             data["name_for_list"] = last_name
         else:
-            data["name_for_list"] = first_name
+            if first_name is None and full_name is not None:
+                data["name_for_list"] = full_name
+            else:
+                data["name_for_list"] = first_name
     if last_name is not None and first_name is not None:
         data["sort_by"] = last_name + " " + first_name
     elif last_name is not None and first_name is None:
         data["sort_by"] = last_name
     else:
-        data["sort_by"] = first_name
+        if first_name is None and full_name is not None:
+            data["sort_by"] = full_name
+        else:
+            data["sort_by"] = first_name
     dates = [date_born, date_deceased]
     i = 0
     for date in dates:
