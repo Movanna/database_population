@@ -362,17 +362,40 @@ def create_bibl_data(metadata, publication_id, language, est_or_ms):
             publication_archive_info = handle_archive_info(publication_archive_info, language)
             bibl_data["publication_archive_info"] = publication_archive_info
         author = row.get("author")
+        # if Mechelin is co-author, and thus registered in the db
+        # (if sole author then there's no registration)
+        # his full name was already shortened to "Leo Mechelin"
+        # in the db query response (see comments on sender/recipient)
         if author is not None and author not in authors:
             bibl_data["author"].append(author)
             authors.add(author)
         sender = row.get("sender")
-        if sender is not None and sender not in senders:
-            bibl_data["sender"].append(sender)
-            senders.add(sender)
+        if sender is not None:
+            # don't display Mechelin's full name including all middle names
+            # in the rare cases where he's actually been registered in the db as sender
+            # instead, use the shortened name version
+            # default is no db registration, but if he's a co-sender,
+            # then he's explicitly added, and for him we don't want to use
+            # the name from the full_name field
+            if sender == "Leopold Henrik Stanislaus Mechelin":
+                sender = "Leo Mechelin"
+            if sender not in senders:
+                bibl_data["sender"].append(sender)
+                senders.add(sender)
         recipient = row.get("recipient")
-        if recipient is not None and recipient not in recipients:
-            bibl_data["recipient"].append(recipient)
-            recipients.add(recipient)
+        if recipient is not None:
+            # don't display Mechelin's full name including all middle names
+            # in the rare cases where he's actually been registered in the db as recipient
+            # instead, use the shortened name version
+            # default is no db registration, but if he's a co-recipient,
+            # (and not just the ultimate owner of a letter sent to someone else)
+            # then he's explicitly added, and for him we don't want to use
+            # the name from the full_name field
+            if recipient == "Leopold Henrik Stanislaus Mechelin":
+                recipient = "Leo Mechelin"
+            if recipient not in recipients:
+                bibl_data["recipient"].append(recipient)
+                recipients.add(recipient)
         if est_or_ms == "est":
             translated_into = row.get("translated_into")
             if translated_into is not None:
@@ -580,6 +603,10 @@ def get_metadata(project, publication_id, language):
                 if publication_date is not None and data["publication_date"] is None:
                     data["publication_date"] = publication_date
                 author = row.get("author")
+                # if Mechelin is co-author, and thus registered in the db
+                # (if sole author then there's no registration)
+                # his full name was already shortened to "Leo Mechelin"
+                # in the db query response (see comments on sender/recipient)
                 author_last_name = row.get("author_last_name")
                 if author is not None and author not in authors:
                     data["author"].append(author)
@@ -589,20 +616,39 @@ def get_metadata(project, publication_id, language):
                     author_last_names.append(author_last_name)
                 sender = row.get("sender")
                 sender_last_name = row.get("sender_last_name")
-                if sender is not None and sender not in senders:
-                    data["sender"].append(sender)
-                    senders.add(sender)
-                    if sender_last_name is None:
-                        sender_last_name = ""
-                    sender_last_names.append(sender_last_name)
+                if sender is not None:
+                    # don't display Mechelin's full name including all middle names
+                    # in the rare cases where he's actually been registered in the db as sender
+                    # instead, use the shortened name version
+                    # default is no db registration, but if he's a co-sender,
+                    # then he's explicitly added, and for him we don't want to use
+                    # the name from the full_name field
+                    if sender == "Leopold Henrik Stanislaus Mechelin":
+                        sender = "Leo Mechelin"
+                    if sender not in senders:
+                        data["sender"].append(sender)
+                        senders.add(sender)
+                        if sender_last_name is None:
+                            sender_last_name = ""
+                        sender_last_names.append(sender_last_name)
                 recipient = row.get("recipient")
                 recipient_last_name = row.get("recipient_last_name")
-                if recipient is not None and recipient not in recipients:
-                    data["recipient"].append(recipient)
-                    recipients.add(recipient)
-                    if recipient_last_name is None:
-                        recipient_last_name = ""
-                    recipient_last_names.append(recipient_last_name)
+                if recipient is not None:
+                    # don't display Mechelin's full name including all middle names
+                    # in the rare cases where he's actually been registered in the db as recipient
+                    # instead, use the shortened name version
+                    # default is no db registration, but if he's a co-recipient,
+                    # (and not just the ultimate owner of a letter sent to someone else)
+                    # then he's explicitly added, and for him we don't want to use
+                    # the name from the full_name field
+                    if recipient == "Leopold Henrik Stanislaus Mechelin":
+                        recipient = "Leo Mechelin"
+                    if recipient not in recipients:
+                        data["recipient"].append(recipient)
+                        recipients.add(recipient)
+                        if recipient_last_name is None:
+                            recipient_last_name = ""
+                        recipient_last_names.append(recipient_last_name)
                 translated_into = row.get("translated_into")
                 if translated_into is not None:
                     if language == "sv":
