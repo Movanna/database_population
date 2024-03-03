@@ -103,7 +103,7 @@ def replace_date(original_date):
     original_date = original_date.replace("/", ".")
     original_date = original_date.replace("[", "")
     original_date = original_date.replace("]", "")
-    match_string = re.search("\?", original_date)
+    match_string = re.search(r"\?", original_date)
     if match_string:
         original_date = original_date.replace("?", "")
         date_uncertain = True

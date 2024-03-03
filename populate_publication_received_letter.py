@@ -194,7 +194,7 @@ def replace_date(original_date):
         original_date = original_date.replace("/", ".")
         original_date = original_date.replace("[", "")
         original_date = original_date.replace("]", "")
-        match_string = re.search("\?", original_date)
+        match_string = re.search(r"\?", original_date)
         match_string_2 = re.search("^ca ", original_date)
         if match_string or match_string_2:
             original_date = original_date.replace("?", "")
