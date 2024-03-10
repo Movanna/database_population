@@ -345,7 +345,7 @@ def check_group(group, publication_id):
     elif COLLECTION_ID == 3:
         collection_groups = [51, 63, 76, 90]
     elif COLLECTION_ID == 4:
-        collection_groups = [121, 122, 123, 124]
+        collection_groups = [121, 122, 123]
     elif COLLECTION_ID == 5:
         collection_groups = [125, 126, 127, 128, 129]
     elif COLLECTION_ID == 6:
