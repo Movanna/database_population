@@ -15,8 +15,8 @@ conn_db = psycopg2.connect(
 )
 cursor = conn_db.cursor()
 
-COLLECTION_ID = 2
-UNKNOWN_TIME_PERIOD_ID = 40
+COLLECTION_ID = 5
+UNKNOWN_TIME_PERIOD_ID = 129
 
 # get the relevant info for all publications in a collection
 def get_publication_info():
@@ -32,6 +32,7 @@ def find_out_group(publications):
         if group_id is None:
             id = tuple[0]
             original_publication_date = tuple[2]
+            print(original_publication_date)
             search_string = re.compile(r"^(.{4})-(.{2})-(.{2})")
             match_string = re.search(search_string, original_publication_date)
             if match_string:
@@ -72,7 +73,6 @@ def find_out_group(publications):
                     elif date >= datetime.date(1867, 1, 1) and date < datetime.date(1873, 1, 1):
                         group_id = 4
                     else:
-                        group_id = 5
                         print("Publication " + str(id) + " doesn't match the groups in collection " + str(COLLECTION_ID))
                 elif COLLECTION_ID == 2:
                     if date >= datetime.date(1873, 1, 1) and date < datetime.date(1874, 1, 1):
@@ -84,7 +84,6 @@ def find_out_group(publications):
                     elif date >= datetime.date(1880, 1, 1) and date < datetime.date(1882, 1, 1):
                         group_id = 30
                     else:
-                        group_id = 40
                         print("Publication " + str(id) + " doesn't match the groups in collection " + str(COLLECTION_ID))
                 elif COLLECTION_ID == 3:
                     if date >= datetime.date(1882, 1, 1) and date < datetime.date(1885, 1, 1):
@@ -96,7 +95,6 @@ def find_out_group(publications):
                     elif date >= datetime.date(1889, 1, 1) and date < datetime.date(1890, 7, 1):
                         group_id = 90
                     else:
-                        group_id = 105
                         print("Publication " + str(id) + " doesn't match the groups in collection " + str(COLLECTION_ID))
                 elif COLLECTION_ID == 4:
                     if date >= datetime.date(1890, 7, 1) and date < datetime.date(1893, 1, 1):
@@ -106,7 +104,6 @@ def find_out_group(publications):
                     elif date >= datetime.date(1896, 1, 1) and date < datetime.date(1898, 8, 1):
                         group_id = 123
                     else:
-                        group_id = 124
                         print("Publication " + str(id) + " doesn't match the groups in collection " + str(COLLECTION_ID))
                 elif COLLECTION_ID == 5:
                     if date >= datetime.date(1898, 8, 1) and date < datetime.date(1899, 9, 1):
@@ -157,7 +154,7 @@ def find_out_group(publications):
                         group_id = 143
                     elif date >= datetime.date(1912, 1, 1) and date < datetime.date(1913, 1, 1):
                         group_id = 144
-                    elif date >= datetime.date(1913, 1, 1) and date < datetime.date(1914, 2, 1):
+                    elif date >= datetime.date(1913, 1, 1) and date < datetime.date(1915, 1, 1):
                         group_id = 145
                     else:
                         group_id = 146
