@@ -15,6 +15,8 @@ I thus **planned the entire digital workflow for the project**, because the digi
 
 For the last step in the process of publishing these texts using the Generic Digital Edition Platform, see my repo [transform_texts](https://github.com/Movanna/transform_texts).
 
+For a specific guide to the scripts and the project's data and infrastructure, as well as hands-on instructions for updating the database, please see the [readme for the publishing process](https://github.com/Movanna/database_population/blob/main/README_publishing_process.md).
+
 ## 1. Populate table subject
 Table subject holds information about persons.
 
