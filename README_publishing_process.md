@@ -15,7 +15,7 @@ Initially, **facsimiles** were registered in the spreadsheet by a single URL, wh
 
 If the document's images have been registered after the introduction of the database, there are two values: the first and the last page. If the document's images are in order, that is. If not, then there are a lot of values, which may be read either as all from-values in one cell and all to-values in another cell ("1, 7, 9" and "3, -, 10"), or simply as all values in one cell ("1-3, 7, 9-10"). These cases have to be sorted out by hand, while the simple cases are handled by the scripts. Also, there may be more than one facimile for a single document, if there are several versions of it. Again, the simple cases are handled (semi)automatically and the complicated ones are not.  
 
-The spreadsheet is in active use, meaning that new archive units are still being added as the registration of their documents and images proceed.  
+The spreadsheet is in active use, meaning that new archive units are still being added as the registration of their documents and images proceeds.  
 
 ### The scripts
 Everything that goes into the database is primarily added through scripts, unless we're talking about smaller corrections. There are two GitHub repos for the scripts: [database_population](https://github.com/Movanna/database_population) and [transform_texts](https://github.com/Movanna/transform_texts). Their READMEs are quite extensive, and the scripts contain lots of comments.    
